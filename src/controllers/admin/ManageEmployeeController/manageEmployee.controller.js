@@ -1,4 +1,5 @@
 import Employee from "../../../models/employee.model.js";
+import UserAuth from "../../../models/userauth.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
 import { uploadOnCloudinary } from "../../../utils/cloudinary.utils.js";
@@ -126,3 +127,138 @@ export const DeleteEmployee = asyncHandler(async (req, res, next) => {
         next(new ApiError(500, "Something went wrong while deleting the employee."));
     }
 });
+
+export const SearchEmployee = asyncHandler(async (req, res, next) => {
+    try {
+        const { name } = req.query;
+        const employees = await Employee.findAll({
+            where: {
+                [Sequelize.Op.or]: [
+                    {
+                        first_name: {
+                            [Sequelize.Op.like]: `%${name}%`,
+                        },
+                    },
+                    {
+                        last_name: {
+                            [Sequelize.Op.like]: `%${name}%`,
+                        },
+                    },
+                ],
+            },
+        });
+        res.json(new ApiResponse(200, employees, "Success"));
+    } catch (err) {
+        console.error("Error searching employees:", err);
+        next(new ApiError(500, "Something went wrong while searching employees."));
+    }
+});
+
+export const assignAgentToManager = asyncHandler(async (req, res, next) => {
+    try {
+      const { agent_id, manager_id } = req.body;
+  
+      // Get the user ID from the request (from `verifyJWT` middleware)
+      const loggedInUserId = req.user.user_id; // Ensure `req.user` contains `user_id`
+  
+      // Step 1: Retrieve the `employee_id` from the `user_id` table
+      const userRecord = await UserAuth.findOne({
+        where: { user_id: loggedInUserId },
+        attributes: ["employee_id"], // Only fetch the `employee_id`
+      });
+  
+      if (!userRecord || !userRecord.employee_id) {
+        return next(new ApiError(404, "Employee record not found for this user."));
+      }
+  
+      const loggedInEmployeeId = userRecord.employee_id;
+  
+      // Step 2: Find the logged-in employee (Admin) in the Employee table
+      const loggedInEmployee = await Employee.findOne({
+        where: { employee_id: loggedInEmployeeId },
+        attributes: ["employee_id", "first_name", "role"], // Fetching `name`
+      });
+  
+      if (!loggedInEmployee) {
+        return next(new ApiError(404, "Employee not found in Employee records."));
+      }
+  
+      // Ensure only Admins can assign an agent to a manager
+      if (loggedInEmployee.role !== "Admin") {
+        return next(new ApiError(403, "You are not authorized to perform this action."));
+      }
+  
+      // Validate manager
+      const manager = await Employee.findOne({
+        where: { employee_id: manager_id },
+        attributes: ["employee_id", "first_name", "role"],
+      });
+  
+      if (!manager || manager.role !== "Manager") {
+        return next(new ApiError(404, "Manager not found or invalid role."));
+      }
+  
+      // Validate agent
+      const agent = await Employee.findOne({
+        where: { employee_id: agent_id },
+        attributes: ["employee_id", "first_name", "role", "manager_id"],
+      });
+  
+      if (!agent || agent.role !== "Sales Agent") {
+        return next(new ApiError(404, "Agent not found or invalid role."));
+      }
+  
+      // Check if the agent is already assigned to this manager
+      if (agent.manager_id === manager_id) {
+        return next(new ApiError(400, "Agent is already assigned to this manager."));
+      }
+  
+      // Assign the agent to the manager
+      await agent.update({ manager_id });
+  
+      // Success response including agent, manager, and admin names
+      res.json(
+        new ApiResponse(
+          200,
+          {
+            agent_id: agent.employee_id,
+            agent_name: agent.first_name,
+            manager_id: manager.employee_id,
+            manager_name: manager.first_name,
+            assigned_by_admin_id: loggedInEmployee.employee_id,
+            assigned_by_admin_name: loggedInEmployee.first_name,
+          },
+          "Sales agent assigned to the manager successfully."
+        )
+      );
+    } catch (err) {
+      console.error("Error assigning agent:", err);
+      next(new ApiError(500, "Something went wrong while assigning the agent."));
+    }
+  });
+  
+  export const GetEmployeeByManager = asyncHandler(async (req, res, next) => {
+    try {
+      const { manager_id } = req.params;
+  
+      // Find the manager
+      const manager = await Employee.findByPk(manager_id);
+      if (!manager || manager.role !== "Manager") {
+        return next(new ApiError(404, "Manager not found."));
+      }
+  
+      // Find all agents assigned to this manager
+      const agents = await Employee.findAll({
+        where: { manager_id },
+        attributes: ["employee_id", "first_name", "role"],
+      });
+  
+      // Send the response
+      res.json(new ApiResponse(200, agents, "Success"));
+    } catch (err) {
+      console.error("Error fetching agents by manager:", err);
+      next(new ApiError(500, "Something went wrong while fetching agents by manager."));
+    }
+  }
+  
+);
