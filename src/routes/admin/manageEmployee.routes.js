@@ -1,7 +1,7 @@
 import express from "express";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import { upload } from "../../middlewares/multer.middleware.js";
-import { GetAllEmployees, GetEmployeebyId, UpdateEmployee, DeleteEmployee, SearchEmployee, assignAgentToManager } from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
+import { GetAllEmployees, GetEmployeebyId, UpdateEmployee, DeleteEmployee, SearchEmployee, assignAgentToManager, GetEmployeeByManager, getEmployeeWithAttendance } from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
 
 const router = express.Router();
 
@@ -12,5 +12,7 @@ router.put("/updateEmployee/:id", verifyJWT, upload.fields([{ name: "profile_pic
 router.delete("/deleteEmployee/:id", verifyJWT, DeleteEmployee);
 router.get("/SearchEmployee", verifyJWT, SearchEmployee);
 router.post("/assignAgentToManager", verifyJWT, assignAgentToManager);
+router.get("/getEmployeeByManager/:id", verifyJWT, GetEmployeeByManager);
+router.get("/employees/:id/attendance", verifyJWT, getEmployeeWithAttendance);
 
 export default router; 
