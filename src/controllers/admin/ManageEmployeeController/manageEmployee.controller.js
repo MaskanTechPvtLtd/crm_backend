@@ -7,7 +7,7 @@ import { Op } from "sequelize";
 import UserAuth from "../../../models/userauth.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
-import { uploadOnCloudinary } from "../../../utils/cloudinary.utils.js";
+import { uploadOnCloudinary } from "../../../utils/Cloudinary.utils.js";
 import { Sequelize } from "sequelize";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
