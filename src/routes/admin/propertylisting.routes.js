@@ -5,11 +5,11 @@ import { addProperty, GetAllProperties, GetPropertyById, UpdateProperty, DeleteP
 
 const router = express.Router();
 
-router.post("/addproperty", verifyJWT, upload.array("media", 10), addProperty);
+router.post("/addproperty", verifyJWT, upload.array("media", 5), addProperty);
 router.get("/getallproperties", verifyJWT, GetAllProperties);
 router.get("/getproperty/:property_id", verifyJWT, GetPropertyById);
 router.put("/updateproperty/:id", verifyJWT, UpdateProperty);
 // router.put("/updateEmployee/:id", verifyJWT, upload.fields([{ name: "profile_picture", maxCount: 1 }]), UpdateEmployee);
-router.delete("/deleteproperty/:id", verifyJWT, DeleteProperty);
+router.delete("/deleteproperty/:property_id", verifyJWT, DeleteProperty);
 
 export default router;

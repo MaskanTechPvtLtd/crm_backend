@@ -13,10 +13,11 @@ const PropertyMedia = sequelize.define(
     property_id: {
       type: DataTypes.INTEGER,
       references: {
-        model: Property,
+        model: "Property",
         key: "property_id",
       },
       onDelete: "CASCADE",
+      onUpdate : "CASCADE"
     },
     media_type: {
       type: DataTypes.ENUM("Image", "Video"),
@@ -38,6 +39,6 @@ const PropertyMedia = sequelize.define(
 );
 
 // Associations
-PropertyMedia.belongsTo(Property, { foreignKey: "property_id", as: "property" });
+// PropertyMedia.belongsTo(Property, { foreignKey: "property_id", as: "property" });
 
 export default PropertyMedia;

@@ -1,5 +1,4 @@
 import Employee from "../../../models/employee.model.js";
-import Attendance from "../../../models/attendance.model.js";
 import Properties from "../../../models/properties.model.js";
 import PropertyType from "../../../models/propertytypes.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
@@ -19,9 +18,6 @@ import { convertUTCToLocal } from "../../../utils/DateHelper.utils.js";
 // Add a new property
 export const addProperty = asyncHandler(async (req, res, next) => {
     try {
-        console.log("Received request body:", req.body);
-        console.log("Received files:", req.files);
-
         // Ensure req.body is correctly parsed
         const {
             title,
@@ -105,6 +101,12 @@ export const GetAllProperties = asyncHandler(async (req, res, next) => {
                 as: "status",
                 attributes: ["status_id", "status_name"],
             },
+            {
+                model: PropertyMedia,
+                as: "propertyMedia",
+                attributes: ["media_type", "file_url"]
+
+            },
         ],
     });
 
@@ -138,6 +140,12 @@ export const GetPropertyById = asyncHandler(async (req, res, next) => {
                 model: Statuses,
                 as: "status",
                 attributes: ["status_id", "status_name"],
+            },
+            {
+                model: PropertyMedia,
+                as: "propertyMedia",
+                attributes: ["media_type", "file_url"]
+
             },
         ],
     });
