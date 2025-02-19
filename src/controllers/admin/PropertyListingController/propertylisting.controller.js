@@ -13,6 +13,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
 import { convertUTCToLocal } from "../../../utils/DateHelper.utils.js";
+import { sequelize } from "../../../db/index.js";
 
 
 // Add a new property
@@ -176,40 +177,89 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
         listed_date,
         description,
     } = req.body;
-
-    // Validate required fields
+    
     if (!title || !address || !city || !state || !zip_code || !property_type_id || !price || !status_id || !listed_by) {
         return next(new ApiError(400, "Missing required fields."));
     }
 
-    // Update property
-    const updatedProperty = await Properties.update(
-        {
-            title,
-            address,
-            city,
-            state,
-            zip_code,
-            property_type_id,
-            price,
-            bedrooms,
-            bathrooms,
-            square_feet,
-            status_id,
-            listed_by,
-            listed_date: listed_date ? convertUTCToLocal(listed_date) : convertUTCToLocal(new Date()),
-            description,
-        },
-        {
-            where: { property_id },
+    // Start transaction
+    const transaction = await sequelize.transaction();
+    try {
+        // Check if property exists
+        const existingProperty = await Properties.findOne({ where: { property_id }, transaction });
+        if (!existingProperty) {
+            await transaction.rollback();
+            return next(new ApiError(404, "Property not found."));
+        }  
+
+
+        // Update property
+        const [updatedRows] = await Properties.update(
+            {
+                title,
+                address,
+                city,
+                state,
+                zip_code,
+                property_type_id,
+                price,
+                bedrooms,
+                bathrooms,
+                square_feet,
+                status_id,
+                listed_by,
+                listed_date: listed_date ? convertUTCToLocal(listed_date) : convertUTCToLocal(new Date()),
+                description,
+            },
+            { where: { property_id }, transaction }
+        );
+
+        if (updatedRows === 0) {
+            await transaction.rollback();
+            return next(new ApiError(500, "Failed to update property."));
         }
-    );
 
-    if (!updatedProperty) {
-        return next(new ApiError(500, "Error updating property."));
+
+        // Handle media files
+        if (req.files && req.files.length > 0) {
+
+            // Delete existing media
+            await PropertyMedia.destroy({ where: { property_id }, transaction });
+
+            // Upload new media
+            const uploadedMedia = await Promise.all(
+                req.files.map(async (file) => {
+                    try {
+                        const cloudinaryResponse = await uploadOnCloudinary(file.path);
+                        return cloudinaryResponse
+                            ? {
+                                  property_id,
+                                  file_url: cloudinaryResponse.secure_url,
+                                  media_type: file.mimetype.startsWith("image") ? "Image" : "Video",
+                                  uploaded_at: new Date(),
+                              }
+                            : null;
+                    } catch (error) {
+                        console.error("❌ Cloudinary upload failed:", error);
+                        return null;
+                    }
+                })
+            );
+
+            const validMedia = uploadedMedia.filter((media) => media !== null);
+            if (validMedia.length > 0) {
+                await PropertyMedia.bulkCreate(validMedia, { transaction });
+            }
+        }
+
+        // Commit transaction
+        await transaction.commit();
+
+        res.status(200).json(new ApiResponse(200, updatedRows, "Property updated successfully"));
+    } catch (error) {
+        await transaction.rollback();
+        next(new ApiError(500, "Error updating property."));
     }
-
-    res.status(200).json(new ApiResponse(200, {}, "Property updated successfully"));
 });
 
 // Delete property

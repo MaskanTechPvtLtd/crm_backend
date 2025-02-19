@@ -8,8 +8,7 @@ const router = express.Router();
 router.post("/addproperty", verifyJWT, upload.array("media", 5), addProperty);
 router.get("/getallproperties", verifyJWT, GetAllProperties);
 router.get("/getproperty/:property_id", verifyJWT, GetPropertyById);
-router.put("/updateproperty/:id", verifyJWT, UpdateProperty);
-// router.put("/updateEmployee/:id", verifyJWT, upload.fields([{ name: "profile_picture", maxCount: 1 }]), UpdateEmployee);
+router.put("/updateproperty/:property_id", verifyJWT, upload.array("media", 5), UpdateProperty);
 router.delete("/deleteproperty/:property_id", verifyJWT, DeleteProperty);
 
 export default router;

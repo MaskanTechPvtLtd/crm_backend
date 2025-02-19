@@ -5,6 +5,7 @@ import limiter from "./middlewares/rateLimiter.middleware.js";
 import adminRoutes from "./routes/admin/admin.routes.js";
 import manageEmployeeRoutes from "./routes/admin/manageEmployee.routes.js";
 import propertyListingRoutes from "./routes/admin/propertylisting.routes.js";
+import HelperDataRoutes from "./routes/admin/helper.routes.js"
 // import { errorHandler } from "./middlewares/errorHandler.js";
 // import importRoutes from "./routes/admin/import.routes.js";
 // import locationRoutes from "./routes/admin/location.routes.js";
@@ -43,6 +44,7 @@ app.use(helmetMiddleware);
 app.use("/api/v1", adminRoutes);
 app.use("/api/v1/manageEmployee", manageEmployeeRoutes);
 app.use("/api/v1/property", propertyListingRoutes);
+app.use("/api/v1/metadata", HelperDataRoutes)
 
 
 
