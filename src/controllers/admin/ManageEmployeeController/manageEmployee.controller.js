@@ -5,7 +5,6 @@ import PropertyType from "../../../models/propertytypes.model.js";
 import Statuses from "../../../models/statuses.model.js";
 import { Op } from "sequelize";
 import UserAuth from "../../../models/userauth.model.js";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
 import { uploadOnCloudinary } from "../../../utils/Cloudinary.utils.js";
 import { Sequelize } from "sequelize";
@@ -15,12 +14,24 @@ import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
 import dayjs from "dayjs";
 
 
-export const GetAllEmployees = asyncHandler(async (req, res,) => {
+export const GetAllEmployees = asyncHandler(async (req, res, next) => {
   try {
-    // Fetch all employees from the database
-    const AllEmployee = await Employee.findAll();
-    // Send the response
-    res.json(new ApiResponse(200, AllEmployee, "Success"));
+    // Extract `role` query parameter (optional)
+    const { role } = req.query;
+
+    // Define filter object
+    const whereCondition = role ? { role } : {}; // If `role` exists, filter by it
+
+    // Fetch employees based on filter
+    const employees = await Employee.findAll({ where: whereCondition });
+
+    // Check if employees exist
+    if (!employees || employees.length === 0) {
+      return next(new ApiError(404, "No employees found."));
+    }
+
+    // Send response
+    res.status(200).json(new ApiResponse(200, employees, "Employees retrieved successfully."));
   } catch (err) {
     console.error("Error fetching employees:", err);
     next(new ApiError(500, "Something went wrong while fetching employees."));
@@ -35,7 +46,7 @@ export const GetEmployeebyId = asyncHandler(async (req, res) => {
     console.error("Error fetching employee by id:", err)
     next(new ApiError(500, "something went wrong while fetching employee by id"))
   }
-})
+});
 
 export const CreateEmployee = asyncHandler(async (req, res) => {
   try {

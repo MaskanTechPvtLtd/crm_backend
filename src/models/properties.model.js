@@ -83,6 +83,14 @@ const Property = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    assign_to: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: Employee,
+        key: "employee_id",
+      },
+      onDelete: "SET NULL",
+    },
   },
   {
     tableName: "properties",

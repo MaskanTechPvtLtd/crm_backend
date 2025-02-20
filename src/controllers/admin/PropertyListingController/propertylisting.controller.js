@@ -3,12 +3,8 @@ import Properties from "../../../models/properties.model.js";
 import PropertyType from "../../../models/propertytypes.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
 import Statuses from "../../../models/statuses.model.js";
-import { Op } from "sequelize";
 import UserAuth from "../../../models/userauth.model.js";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
 import { uploadOnCloudinary } from "../../../utils/Cloudinary.utils.js";
-import { Sequelize } from "sequelize";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
@@ -89,39 +85,51 @@ export const addProperty = asyncHandler(async (req, res, next) => {
     }
 });
 
+//get property list based on filter by status or property type
 export const GetAllProperties = asyncHandler(async (req, res, next) => {
-    const properties = await Properties.findAll({
-        include: [
-            {
-                model: PropertyType,
-                as: "propertyType",
-                attributes: ["property_type_id", "type_name"],
-            },
-            {
-                model: Statuses,
-                as: "status",
-                attributes: ["status_id", "status_name"],
-            },
-            {
-                model: PropertyMedia,
-                as: "propertyMedia",
-                attributes: ["media_type", "file_url"]
+    try {
+        const { status_id, property_type_id } = req.query;
 
-            },
-        ],
-    });
+        // Build dynamic where condition
+        const whereCondition = {};
+        if (status_id) whereCondition.status_id = status_id;
+        if (property_type_id) whereCondition.property_type_id = property_type_id;
 
-    if (!properties) {
-        return next(new ApiError(404, "No properties found."));
+        const properties = await Properties.findAll({
+            where: whereCondition, // Apply filters dynamically
+            include: [
+                {
+                    model: PropertyType,
+                    as: "propertyType",
+                    attributes: ["property_type_id", "type_name"],
+                },
+                {
+                    model: Statuses,
+                    as: "status",
+                    attributes: ["status_id", "status_name"],
+                },
+                {
+                    model: PropertyMedia,
+                    as: "propertyMedia",
+                    attributes: ["media_type", "file_url"],
+                },
+            ],
+        });
+
+        if (!properties || properties.length === 0) {
+            return next(new ApiError(404, "No properties found."));
+        }
+
+        res.status(200).json(
+            new ApiResponse(200, properties, "Properties retrieved successfully.")
+        );
+    } catch (error) {
+        console.error("Error fetching properties:", error);
+        next(new ApiError(500, "An error occurred while fetching properties."));
     }
-
-    res.status(200).json(
-        new ApiResponse(200, {
-            properties,
-        })
-    );
 });
 
+//get single property
 export const GetPropertyById = asyncHandler(async (req, res, next) => {
     const property_id = (req.params.property_id); // Convert to integer
 
@@ -282,5 +290,85 @@ export const DeleteProperty = asyncHandler(async (req, res, next) => {
     await Properties.destroy({ where: { property_id } });
 
     res.status(200).json(new ApiResponse(200, {}, "Property deleted successfully"));
+});
+
+//assign property to agent by admin(only admin can assign)
+export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
+    const { agent_id, property_id } = req.body;
+
+    // Validate input
+    if (!property_id || !agent_id) {
+        return next(new ApiError(400, "Missing required fields (property_id, agent_id)."));
+    }
+
+    // Find the property
+    const property = await Properties.findByPk(property_id, {
+        attributes: ["property_id", "title", "assign_to"], // Include title
+    });
+
+    if (!property) {
+        return next(new ApiError(404, "Property not found."));
+    }
+
+    // 🔹 Check if the property is already assigned
+    if (property.assign_to) {
+        return next(new ApiError(400, `Property "${property.title}" is already assigned to agent ID ${property.assign_to}.`));
+    }
+
+    // Get the logged-in user's ID from the JWT middleware
+    const loggedInUserId = req.user.user_id; // Ensure `req.user` contains `user_id`
+
+    // Step 1: Retrieve the `employee_id` from `user_id`
+    const userRecord = await UserAuth.findOne({
+        where: { user_id: loggedInUserId },
+        attributes: ["employee_id"], // Fetch `employee_id`
+    });
+
+    if (!userRecord || !userRecord.employee_id) {
+        return next(new ApiError(404, "Employee record not found for this user."));
+    }
+
+    const loggedInEmployeeId = userRecord.employee_id;
+
+    // Step 2: Find the logged-in employee (Admin)
+    const loggedInEmployee = await Employee.findOne({
+        where: { employee_id: loggedInEmployeeId },
+        attributes: ["employee_id", "first_name", "role"],
+    });
+
+    if (!loggedInEmployee) {
+        return next(new ApiError(404, "Employee not found in records."));
+    }
+
+    // Ensure only Admins can assign an agent to a property
+    if (loggedInEmployee.role !== "Admin") {
+        return next(new ApiError(403, "You are not authorized to assign properties."));
+    }
+
+    // Step 3: Find the Agent’s Name
+    const agent = await Employee.findOne({
+        where: { employee_id: agent_id },
+        attributes: ["employee_id", "first_name", "last_name"],
+    });
+
+    if (!agent) {
+        return next(new ApiError(404, "Agent not found."));
+    }
+
+    // Step 4: Assign the property to the agent
+    property.assign_to = agent_id;
+    await property.save();
+
+    // Step 5: Return agent name & property title
+    res.status(200).json(
+        new ApiResponse(200, {
+            property_id: property.property_id,
+            property_title: property.title,
+            assigned_to: {
+                agent_id: agent.employee_id,
+                agent_name: `${agent.first_name} ${agent.last_name}`,
+            },
+        }, "Property assigned to agent successfully.")
+    );
 });
 
