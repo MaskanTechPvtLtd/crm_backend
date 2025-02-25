@@ -28,23 +28,14 @@ const Task = sequelize.define(
       },
       onDelete: "SET NULL",
     },
-    assigned_to: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: Employee,
-        key: "employee_id",
-      },
-      onDelete: "SET NULL",
-    },
     created_by: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false, // Ensuring every task belongs to an employee
       references: {
         model: Employee,
         key: "employee_id",
       },
-      onDelete: "SET NULL",
+      onDelete: "CASCADE", // If an employee is deleted, their tasks should also be removed
     },
     due_date: {
       type: DataTypes.DATEONLY,
@@ -62,8 +53,7 @@ const Task = sequelize.define(
 );
 
 // Define associations
-Task.belongsTo(Employee, { as: "Assignee", foreignKey: "assigned_to", onDelete: "SET NULL" });
-Task.belongsTo(Employee, { as: "Creator", foreignKey: "created_by", onDelete: "SET NULL" });
+Task.belongsTo(Employee, { as: "Creator", foreignKey: "created_by", onDelete: "CASCADE" });
 Task.belongsTo(Status, { foreignKey: "status_id", onDelete: "SET NULL" });
 
 export default Task;

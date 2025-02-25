@@ -7,9 +7,7 @@ import manageEmployeeRoutes from "./routes/admin/manageEmployee.routes.js";
 import propertyListingRoutes from "./routes/admin/propertylisting.routes.js";
 import HelperDataRoutes from "./routes/admin/helper.routes.js"
 import LeadsRoutes from "./routes/admin/Leads.routes.js"
-// import { errorHandler } from "./middlewares/errorHandler.js";
-// import importRoutes from "./routes/admin/import.routes.js";
-// import locationRoutes from "./routes/admin/location.routes.js";
+import TaskRoutes from "./routes/admin/task.routes.js"
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
@@ -47,6 +45,7 @@ app.use("/api/v1/manageEmployee", manageEmployeeRoutes);
 app.use("/api/v1/property", propertyListingRoutes);
 app.use("/api/v1/metadata", HelperDataRoutes)
 app.use("/api/v1/leads", LeadsRoutes)
+app.use("/api/v1/tasks", TaskRoutes)
 
 
 
