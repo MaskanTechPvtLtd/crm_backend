@@ -8,6 +8,7 @@ import propertyListingRoutes from "./routes/admin/propertylisting.routes.js";
 import HelperDataRoutes from "./routes/admin/helper.routes.js"
 import LeadsRoutes from "./routes/admin/Leads.routes.js"
 import TaskRoutes from "./routes/admin/task.routes.js"
+import DailyDashbordRoutes from "./routes/admin/dailydashbord.routes.js"
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
@@ -46,6 +47,7 @@ app.use("/api/v1/property", propertyListingRoutes);
 app.use("/api/v1/metadata", HelperDataRoutes)
 app.use("/api/v1/leads", LeadsRoutes)
 app.use("/api/v1/tasks", TaskRoutes)
+app.use("/api/v1/admin", DailyDashbordRoutes)
 
 
 

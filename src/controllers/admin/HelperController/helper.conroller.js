@@ -4,6 +4,7 @@ import PropertyType from "../../../models/propertytypes.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
 import Statuses from "../../../models/statuses.model.js";
 import Leadsources from "../../../models/leadsources.model.js"
+import LeadStatus from "../../../models/leadstatus.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
@@ -38,5 +39,15 @@ export const GetPropertyType = asyncHandler(async (req, res, next) => {
     }
 
     res.status(200).json(new ApiResponse(200, propertytype, "Statuses retrieved successfully."));
+
+})
+
+export const GetLeadStatus = asyncHandler(async (req, res, next) => {
+    const statuses = await LeadStatus.findAll()
+    if (!statuses || statuses.length === 0) {
+        return res.status(404).json(new ApiError(404, [], "No Lead Status found."));
+    }
+
+    res.status(200).json(new ApiResponse(200, statuses, "Statuses retrieved successfully."));
 
 })

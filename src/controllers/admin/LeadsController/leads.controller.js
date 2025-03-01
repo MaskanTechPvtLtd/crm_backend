@@ -9,7 +9,7 @@ import LeadSource from "../../../models/leadsources.model.js";
 import Lead from "../../../models/leads.model.js"
 import Employee from "../../../models/employee.model.js";
 import PropertyType from "../../../models/propertytypes.model.js";
-import Status from "../../../models/statuses.model.js";
+import Status from "../../../models/leadstatus.model.js";
 import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
 
@@ -295,5 +295,3 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
     next(new ApiError(500, "Something went wrong while fetching interactions."));
   }
 });
-
-

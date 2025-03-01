@@ -3,7 +3,7 @@ import { sequelize } from "../db/index.js"; // Adjust the path based on your set
 import Employee from "./employee.model.js";
 import PropertyType from "./propertytypes.model.js";
 import LeadSource from "./leadsources.model.js";
-import Status from "./statuses.model.js";
+import Status from "./leadstatus.model.js";
 
 const Lead = sequelize.define(
   "Lead",
