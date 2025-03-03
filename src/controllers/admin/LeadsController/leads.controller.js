@@ -295,3 +295,24 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
     next(new ApiError(500, "Something went wrong while fetching interactions."));
   }
 });
+
+export const DeleteLead = asyncHandler(async (req, res, next) => {
+  try {
+    const { lead_id } = req.params;
+
+    // Fetch the lead to be deleted
+    const lead = await Lead.findByPk(lead_id);
+
+    if (!lead) {
+      return next(new ApiError(404, "Lead not found."));
+    }
+
+    // Delete the lead
+    await lead.destroy();
+
+    res.status(200).json(new ApiResponse(200, null, "Lead deleted successfully."));
+  } catch (error) {
+    console.error("Error deleting lead:", error);
+    next(new ApiError(500, "Something went wrong while deleting the lead."));
+  }
+});
