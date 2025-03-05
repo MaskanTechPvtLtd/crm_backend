@@ -12,6 +12,7 @@ import PropertyType from "../../../models/propertytypes.model.js";
 import Status from "../../../models/leadstatus.model.js";
 import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
+import { sendNotification } from "../../../utils/sendNotification.utils.js";
 
 
 export const AddNewLead = asyncHandler(async (req, res, next) => {
@@ -177,6 +178,8 @@ export const AssignLeadToAgent = asyncHandler(async (req, res, next) => {
     if (loggedInEmployee.role.toLowerCase() !== "admin") {
       return next(new ApiError(403, "Forbidden: You are not authorized to assign leads."));
     }
+    const adminId = loggedInEmployee.employee_id;
+
 
     // Step 3: Check if the lead exists
     const lead = await Lead.findByPk(lead_id);
@@ -194,6 +197,16 @@ export const AssignLeadToAgent = asyncHandler(async (req, res, next) => {
     lead.assigned_to_fk = employee_id;
     await lead.save();
 
+    await sendNotification({
+      recipientUserId: employee_id,
+      senderId: adminId,
+      entityType: "Lead",
+      entityId: lead_id,
+      notificationType: "Assignment",
+      title: "New Lead Assignment",
+      message: "You have been assigned a new Lead. Please review the details.",
+    });
+
     res.status(200).json(new ApiResponse(200, lead, "Lead successfully assigned to the agent."));
   } catch (error) {
     console.error("Error assigning lead:", error);
@@ -207,7 +220,7 @@ export const AssignLeadToAgent = asyncHandler(async (req, res, next) => {
   }
 });
 
-// Create an interaction entry
+// Create an interaction entry this willdone by sale agent only
 export const logInteraction = asyncHandler(async (req, res, next) => {
   try {
     const { lead_id, type, notes, followup_date } = req.body;
@@ -258,13 +271,25 @@ export const logInteraction = asyncHandler(async (req, res, next) => {
       notes, // Notes for the interaction
       followup_date, // Date for follow-up
     });
-
-    res.status(201).json(new ApiResponse(201, interaction, "Interaction logged successfully."));
-  } catch (error) {
-    console.error("Error logging interaction:", error);
-    next(new ApiError(500, "Something went wrong while logging the interaction."));
-  }
-});
+    // Notify Admin about the interaction
+    const admin = await Employee.findOne({ where: { role: "Admin" } });
+    if (admin) {
+      await sendNotification({
+        recipientUserId: admin.employee_id,
+        senderId: loggedInEmployee.employee_id,
+        entityType: "Interaction",
+        entityId: lead_id,
+        notificationType: "Interaction Update",
+        title: "New Interaction Added",
+        message: "A Sales Agent has added an interaction on a lead. Please review the details.",
+      });
+    }
+      res.status(201).json(new ApiResponse(201, interaction, "Interaction logged successfully."));
+    } catch (error) {
+      console.error("Error logging interaction:", error);
+      next(new ApiError(500, "Something went wrong while logging the interaction."));
+    }
+  });
 
 // Get interactions for a lead
 export const getLeadInteractions = asyncHandler(async (req, res, next) => {

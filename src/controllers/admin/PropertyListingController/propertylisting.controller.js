@@ -10,6 +10,7 @@ import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
 import { convertUTCToLocal } from "../../../utils/DateHelper.utils.js";
 import { sequelize } from "../../../db/index.js";
+import { sendNotification } from "../../../utils/sendNotification.utils.js";
 
 
 // Add a new property
@@ -185,7 +186,7 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
         listed_date,
         description,
     } = req.body;
-    
+
     if (!title || !address || !city || !state || !zip_code || !property_type_id || !price || !status_id || !listed_by) {
         return next(new ApiError(400, "Missing required fields."));
     }
@@ -198,7 +199,7 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
         if (!existingProperty) {
             await transaction.rollback();
             return next(new ApiError(404, "Property not found."));
-        }  
+        }
 
 
         // Update property
@@ -241,11 +242,11 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
                         const cloudinaryResponse = await uploadOnCloudinary(file.path);
                         return cloudinaryResponse
                             ? {
-                                  property_id,
-                                  file_url: cloudinaryResponse.secure_url,
-                                  media_type: file.mimetype.startsWith("image") ? "Image" : "Video",
-                                  uploaded_at: new Date(),
-                              }
+                                property_id,
+                                file_url: cloudinaryResponse.secure_url,
+                                media_type: file.mimetype.startsWith("image") ? "Image" : "Video",
+                                uploaded_at: new Date(),
+                            }
                             : null;
                     } catch (error) {
                         console.error("❌ Cloudinary upload failed:", error);
@@ -344,6 +345,7 @@ export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
     if (loggedInEmployee.role !== "Admin") {
         return next(new ApiError(403, "You are not authorized to assign properties."));
     }
+    const adminId = loggedInEmployee.employee_id;
 
     // Step 3: Find the Agent’s Name
     const agent = await Employee.findOne({
@@ -358,6 +360,17 @@ export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
     // Step 4: Assign the property to the agent
     property.assign_to = agent_id;
     await property.save();
+
+    await sendNotification({
+        recipientUserId: agent_id,
+        senderId: adminId,
+        entityType: "Property",
+        entityId: property_id,
+        notificationType: "Assignment",
+        title: "New Property Assignment",
+        message: "You have been assigned a new property. Please review the details.",
+    });
+
 
     // Step 5: Return agent name & property title
     res.status(200).json(

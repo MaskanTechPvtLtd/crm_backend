@@ -1,83 +1,155 @@
-1. Informational response (100 - 199)
-2. succesful response (200-299)
-3. Redirectional respone (300-399)
-4. client error (400-499)
-5. server error response(500-599)
+# CRM Backend
 
-<!--  
-    Add winstom , rate limiter
-    100 continue
-    102 processing
-    200 ok
-    201 created
-    202 accepted
-    307 temporary redirect
-    308 permenant redirect 
+## Introduction
+This is the backend system for the CRM (Customer Relationship Management) application. It is built using **Node.js**, **Express.js**, **PostgreSQL**, and includes additional features such as **Redis caching**, **rate limiting**, **data validation**, and **logging** with Winston.
 
+## HTTP Status Codes
+The application follows standard HTTP response status codes:
 
-    400 bad request 
-    401 unauthorized
-    401 payment required
-    404 not found
-    500 internal server error
-    504 gateway timeout
- -->"# crm_backend"
+### **1xx - Informational Responses**
+- **100 Continue** – Initial part of the request received, client should continue.
+- **102 Processing** – Server is still processing the request.
 
-To run the project
-use npm install
-and install nodemon
+### **2xx - Successful Responses**
+- **200 OK** – Request succeeded.
+- **201 Created** – Resource successfully created.
+- **202 Accepted** – Request accepted but processing is not yet completed.
+
+### **3xx - Redirection Responses**
+- **307 Temporary Redirect** – Resource temporarily moved, same request method should be used.
+- **308 Permanent Redirect** – Resource permanently moved, same request method should be used.
+
+### **4xx - Client Errors**
+- **400 Bad Request** – Invalid request from client.
+- **401 Unauthorized** – Authentication required.
+- **402 Payment Required** – Reserved for future use.
+- **404 Not Found** – Resource not found.
+
+### **5xx - Server Errors**
+- **500 Internal Server Error** – Generic server error.
+- **504 Gateway Timeout** – Server did not receive a timely response.
+
+## Installation and Setup
+
+### **Step 1: Install Dependencies**
+Run the following command to install all required dependencies:
+```sh
+npm install
+```
+
+### **Step 2: Install and Use Nodemon**
+For automatic server restart during development, install **nodemon**:
+```sh
+npm install -g nodemon
+```
+Run the project:
+```sh
 npm run dev
+```
 
-and to read and upload the excel file use the middleware and below is the example
+## Upload and Read Excel Files
+To handle Excel file uploads and parsing, use the provided middleware. Example usage:
+```js
+app.post('/upload', uploadMiddleware, (req, res) => {
+    // Process uploaded Excel file
+});
+```
 
-# Crm_BE
+## Setting Up Redis on Windows
+Follow these steps to install and configure **Redis** on Windows:
 
-# Setup redis in your windows system using below command
+### **Step 1: Install WSL (Windows Subsystem for Linux)**
+```sh
+wsl --install
+```
+After installation, **reboot your system**.
 
-1. wsl --install
-   After installing the wsl reboot your system
+### **Step 2: Install Redis**
+```sh
+sudo apt update
+sudo apt upgrade
+sudo apt install redis-server
+sudo service redis-server start
+```
 
-2. sudo apt update
-3. sudo apt upgrade
-4. sudo apt install redis-server
-5. sudo service redis-server start
-6. redis-cli ping
-7. If Redis is running, you should receive:
-sudo systemctl start redis
-
+### **Step 3: Verify Redis Installation**
+```sh
+redis-cli ping
+```
+If Redis is running, it should return:
+```
 PONG
+```
 
-Step 3: Access Redis from Windows Applications
+### **Step 4: Start Redis Service**
+```sh
+sudo systemctl start redis
+```
+
+### **Step 5: Connect to Redis in Node.js**
 Get the WSL IP Address:
-
+```sh
 ip addr | grep inet
-You should see something like this:inet 172.22.96.1/20 brd 172.22.111.255 scope global eth0
+```
+Example output:
+```
+inet 172.22.96.1/20 brd 172.22.111.255 scope global eth0
+```
+Use this IP to connect Redis in your **Node.js** application.
 
-Step 4: Connect to Redis in Your Node.js App
-<!-- 
-    winston for as production logger
-    rate-limiter to limiting the hit of api
-    data sanitization 
-    express-validator
- -->
+## Key Features
 
+### **1. Logging with Winston**
+**Winston** is used for structured logging in production. It captures logs at different levels (info, error, warning) and stores them for monitoring and debugging.
 
+### **2. API Rate Limiting**
+Rate limiting is implemented to prevent excessive API requests and ensure fair usage.
 
- 
-/**
- * Middleware to validate and sanitize query parameters for the API.
- *
- * Validates the following query parameters:
- * - 'page': Ensures it is a positive integer greater than 0.
- * - 'limit': Ensures it is an integer between 1 and 100.
- *
- * Sanitizes inputs by:
- * - Trimming whitespace.
- * - Converting valid inputs to integers.
- *
- * On validation failure:
- * - Returns a 400 Bad Request response with structured error details.
- *
- * On success:
- * - Proceeds to the next middleware or route handler with sanitized query parameters.
- */
+### **3. Data Validation and Sanitization**
+We use **express-validator** for input validation and sanitization to prevent bad data and security vulnerabilities.
+
+## Middleware for Query Parameter Validation
+This middleware ensures that query parameters are valid and sanitized before being processed:
+
+```js
+const { query, validationResult } = require('express-validator');
+
+const validateQueryParams = [
+    query('page')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Page must be a positive integer greater than 0')
+        .toInt(),
+    query('limit')
+        .optional()
+        .isInt({ min: 1, max: 100 })
+        .withMessage('Limit must be an integer between 1 and 100')
+        .toInt(),
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        next();
+    }
+];
+
+module.exports = validateQueryParams;
+```
+
+This middleware:
+- Validates that `page` and `limit` are within acceptable ranges.
+- Converts them to integers.
+- Returns a **400 Bad Request** response if validation fails.
+- Proceeds to the next middleware if validation succeeds.
+
+---
+
+## Conclusion
+This **CRM backend** provides robust APIs with proper logging, rate limiting, Redis caching, and request validation. Follow the steps above to set up and run the application efficiently.
+
+---
+### **Author**
+📌 Developed by [Maskan Technologies]  
+📧 Contact: [maskan@info.com]
+

@@ -4,8 +4,48 @@ import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import Employee from "../../../models/employee.model.js";
 import EmployeeLocation from "../../../models/employeelocations.model.js";
 
-// @desc    Get the latest location of an employee
-export const getEmployeeLocation = asyncHandler(async (req, res, next) => {
+// ✅ Add Employee Location this will at sales agent side 
+export const addEmployeeLocation = asyncHandler(async (req, res, next) => {
+    const { employee_id, latitude, longitude } = req.body;
+
+    if (!employee_id || !latitude || !longitude) {
+        return next(new ApiError(400, "All fields are required"));
+    }
+
+    // Check if employee exists
+    const employee = await Employee.findOne({ where: { employee_id } });
+    if (!employee) {
+        return next(new ApiError(404, "Employee not found"));
+    }
+
+    // Create new location record
+    const newLocation = await EmployeeLocation.create({
+        employee_id,
+        latitude,
+        longitude,
+        timestamp: new Date(),
+    });
+
+    return res.status(201).json(new ApiResponse(201, newLocation, "Location added successfully"));
+});
+
+// ✅ Get All Employee Locations
+export const getAllEmployeeLocations = asyncHandler(async (req, res, next) => {
+    const locations = await EmployeeLocation.findAll({
+        include: [
+            {
+                model: Employee,
+                attributes: ["first_name", "last_name", "role"],
+            },
+        ],
+    });
+
+    return res.status(200).json(new ApiResponse(200, locations));
+});
+
+
+// ✅ Get Locations for a Specific Employee
+export const getEmployeeLocationsById = asyncHandler(async (req, res, next) => {
     const { employee_id } = req.params;
 
     // Check if employee exists
@@ -14,17 +54,14 @@ export const getEmployeeLocation = asyncHandler(async (req, res, next) => {
         return next(new ApiError(404, "Employee not found"));
     }
 
-    // Get latest location of the employee
-    const employeeLocation = await EmployeeLocation.findOne({
+    const locations = await EmployeeLocation.findAll({
         where: { employee_id },
         order: [["timestamp", "DESC"]], // Get the latest location
     });
 
-    if (!employeeLocation) {
-        return next(new ApiError(404, "Employee location not found"));
+    if (locations.length === 0) {
+        return next(new ApiError(404, "No locations found for this employee"));
     }
 
-    return new ApiResponse(res).success(employeeLocation);
+    return res.status(200).json(new ApiResponse(200, locations));
 });
-
-
