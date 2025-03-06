@@ -1,7 +1,7 @@
 # CRM Backend
 
 ## Introduction
-This is the backend system for the CRM (Customer Relationship Management) application. It is built using **Node.js**, **Express.js**, **PostgreSQL**, and includes additional features such as **Redis caching**, **rate limiting**, **data validation**, and **logging** with Winston.
+This is the backend system for the CRM (Customer Relationship Management) application. It is built using **Node.js**, **Express.js**,**Sequelize**, **PostgreSQL**, and includes additional features such as **Redis caching**, **rate limiting**, **data validation**, and **logging** with Winston.
 
 ## HTTP Status Codes
 The application follows standard HTTP response status codes:

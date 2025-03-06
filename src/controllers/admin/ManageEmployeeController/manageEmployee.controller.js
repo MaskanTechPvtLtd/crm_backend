@@ -12,6 +12,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
 import dayjs from "dayjs";
+import { sendNotification } from "../../../utils/sendNotification.utils.js";
 
 
 export const GetAllEmployees = asyncHandler(async (req, res, next) => {
@@ -233,6 +234,15 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
     // Assign the agent to the manager
     await agent.update({ manager_id });
 
+    await sendNotification({
+      recipientUserId: manager_id,
+      senderId: loggedInEmployeeId,
+      entityType: "Employee",
+      entityId: agent_id,
+      action: "assign",
+      message: `You have been assigned a new Sales Agent: ${agent.first_name}`,
+    })
+
     // Success response including agent, manager, and admin names
     res.json(
       new ApiResponse(
@@ -301,6 +311,7 @@ export const getEmployeeWithAttendance = asyncHandler(async (req, res, next) => 
         "last_name",
         "email",
         "phone",
+        "profile_picture",
         "role",
         "hire_date",
         "manager_id",
@@ -330,15 +341,23 @@ export const getEmployeeWithAttendance = asyncHandler(async (req, res, next) => 
       order: [["attendance_date", "ASC"]],
     });
 
-    // Count Present and Absent days
-    const presentDays = attendanceRecords.filter(att => att.status === "Present").length;
-    const absentDays = attendanceRecords.filter(att => att.status === "Absent").length;
+    // Check if records exist for the provided month
+    const presentDays = attendanceRecords.length > 0
+    ? attendanceRecords.filter(att => att.status === "Present" || att.status === "Late").length
+    : 0;
+    
+    const absentDays = attendanceRecords.length > 0
+      ? attendanceRecords.filter(att => att.status === "Absent").length
+      : 0;
+    const LateDays = attendanceRecords.length > 0
+      ? attendanceRecords.filter(att => att.status === "Late").length
+      : 0;
 
-    // Prepare response data
     let responseData = {
       employee,
       presentDays,
       absentDays,
+      LateDays,
       attendanceRecords
     };
 
@@ -369,4 +388,3 @@ export const getEmployeeWithAttendance = asyncHandler(async (req, res, next) => 
     next(new ApiError(500, "Something went wrong while fetching attendance records."));
   }
 });
-

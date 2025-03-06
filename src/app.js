@@ -11,6 +11,8 @@ import TaskRoutes from "./routes/admin/task.routes.js"
 import NotificationRoutes from "./routes/notification/notifications.routes.js"
 import DailyDashbordRoutes from "./routes/admin/dailydashbord.routes.js"
 import FieldAgentRoutes from "./routes/admin/feildagenttracking.routes.js"
+import AttendanceRoutes from "./routes/sales_agent/attendance.routes.js"
+import AgentLeadsRoutes from "./routes/sales_agent/allLeads.routes.js"
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
@@ -52,6 +54,11 @@ app.use("/api/v1/tasks", TaskRoutes)
 app.use("/api/v1/admin", DailyDashbordRoutes)
 app.use("/api/v1/Notifications", NotificationRoutes)
 app.use("/api/v1/agent", FieldAgentRoutes)
+
+
+//sales agent routes
+app.use("/api/v1/sales-agent", AttendanceRoutes);
+app.use("/api/v1/Agentleads", AgentLeadsRoutes);
 
 
 // Error logger middleware (should be after all other middlewares and routes)
