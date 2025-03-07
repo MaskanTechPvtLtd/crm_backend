@@ -14,6 +14,7 @@ import FieldAgentRoutes from "./routes/admin/feildagenttracking.routes.js"
 import AttendanceRoutes from "./routes/sales_agent/attendance.routes.js"
 import AgentLeadsRoutes from "./routes/sales_agent/allLeads.routes.js"
 import AgentPropertiesRoutes from "./routes/sales_agent/agentproperties.routes.js"
+import TeamDetailsRoutes from "./routes/sales_agent/teamDetails.routes.js"
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
@@ -61,6 +62,7 @@ app.use("/api/v1/agent", FieldAgentRoutes)
 app.use("/api/v1/sales-agent", AttendanceRoutes);
 app.use("/api/v1/Agentleads", AgentLeadsRoutes);
 app.use("/api/v1/Agentproperties", AgentPropertiesRoutes)
+app.use("/api/v1/team", TeamDetailsRoutes)
 
 
 // Error logger middleware (should be after all other middlewares and routes)
