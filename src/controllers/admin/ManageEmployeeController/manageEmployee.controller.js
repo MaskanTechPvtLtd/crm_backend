@@ -2,7 +2,9 @@ import Employee from "../../../models/employee.model.js";
 import Attendance from "../../../models/attendance.model.js";
 import Properties from "../../../models/properties.model.js";
 import PropertyType from "../../../models/propertytypes.model.js";
+import PropertyMedia from "../../../models/propertymedia.model.js";
 import Statuses from "../../../models/statuses.model.js";
+import Leads from "../../../models/leads.model.js"
 import { Op } from "sequelize";
 import UserAuth from "../../../models/userauth.model.js";
 import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
@@ -239,7 +241,8 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
       senderId: loggedInEmployeeId,
       entityType: "Employee",
       entityId: agent_id,
-      action: "assign",
+      notificationType: "Assignment",
+      title: "New Agent Assignment",
       message: `You have been assigned a new Sales Agent: ${agent.first_name}`,
     })
 
@@ -343,9 +346,9 @@ export const getEmployeeWithAttendance = asyncHandler(async (req, res, next) => 
 
     // Check if records exist for the provided month
     const presentDays = attendanceRecords.length > 0
-    ? attendanceRecords.filter(att => att.status === "Present" || att.status === "Late").length
-    : 0;
-    
+      ? attendanceRecords.filter(att => att.status === "Present" || att.status === "Late").length
+      : 0;
+
     const absentDays = attendanceRecords.length > 0
       ? attendanceRecords.filter(att => att.status === "Absent").length
       : 0;
@@ -387,4 +390,95 @@ export const getEmployeeWithAttendance = asyncHandler(async (req, res, next) => 
     console.error("Error fetching attendance records:", err);
     next(new ApiError(500, "Something went wrong while fetching attendance records."));
   }
+});
+
+export const GetTeamByManagers = asyncHandler(async (req, res, next) => {
+  try {
+    // Fetch all managers
+    const managers = await Employee.findAll({
+      where: { role: "Manager" },
+      attributes: ["employee_id", "first_name", "last_name", "profile_picture", "phone", "role"],
+    });
+
+    if (!managers || managers.length === 0) {
+      return next(new ApiError(404, "No managers found."));
+    }
+
+    // Extract manager IDs
+    const managerIds = managers.map(manager => manager.employee_id);
+
+    // Fetch all agents (employees assigned to these managers)
+    const agents = await Employee.findAll({
+      where: { manager_id: managerIds },
+      attributes: ["employee_id", "first_name", "last_name", "profile_picture", "phone", "role", "manager_id"],
+    });
+
+    // Structure response: Add agents under their respective manager
+    const response = managers.map(manager => ({
+      ...manager.toJSON(),
+      agents: agents.filter(agent => agent.manager_id === manager.employee_id),
+    }));
+
+    res.json(new ApiResponse(200, response, "Success"));
+  } catch (err) {
+    console.error("Error fetching employees by managers:", err);
+    next(new ApiError(500, "Something went wrong while fetching employees by managers."));
+  }
+});
+
+
+export const GetTeamDetailsByManager = asyncHandler(async (req, res, next) => {
+  try {
+    const { manager_id } = req.params;
+
+    // Validate manager_id
+    if (!manager_id || isNaN(manager_id)) {
+        return next(new ApiError(400, "Invalid manager ID."));
+    }
+
+    // Fetch employees under the given manager
+    const employees = await Employee.findAll({
+        where: { manager_id, is_active: true },
+        attributes: ["employee_id", "first_name", "last_name", "email", "phone", "role"]
+    });
+
+    if (!employees || employees.length === 0) {
+        return next(new ApiError(404, "No employees found under this manager."));
+    }
+
+    // Extract employee IDs
+    const employeeIds = employees.map(emp => emp.employee_id);
+
+    // Fetch properties listed by those employees
+    const properties = await Properties.findAll({
+        where: { assign_to: employeeIds },
+        include: [
+          {
+              model: PropertyType,
+              as: "propertyType",
+              attributes: ["property_type_id", "type_name"]
+          },
+          {
+              model: PropertyMedia,
+              as: "propertyMedia",
+              attributes: ["media_type", "file_url"]
+          },
+         ],    });
+
+    // Fetch leads assigned to those employees
+    const leads = await Leads.findAll({
+        where: { assigned_to_fk: employeeIds },
+        attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
+    });
+
+    // Construct response
+    return res.status(200).json(new ApiResponse(200, {
+        employees,
+        properties,
+        leads
+    }, "Employees, properties, and leads retrieved successfully."));
+} catch (error) {
+    console.error("Error fetching employees details:", error);
+    return next(new ApiError(500, "Something went wrong while fetching employee details."));
+}
 });

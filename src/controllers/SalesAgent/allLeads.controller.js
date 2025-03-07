@@ -18,10 +18,10 @@ export const getLeadsByAgent = asyncHandler(async (req, res, next) => {
         if (!agent_id || isNaN(agent_id)) {
             return next(new ApiError(400, "Invalid agent ID."));
         }
-        const { status_id, employee_id, property_type_id, source_id } = req.query;
+        const { status_id, property_type_id, source_id } = req.query;
 
         // Build dynamic filter object
-        let filters = {};
+        let filters = {assigned_to_fk: agent_id};
         if (status_id) filters.status_id_fk = status_id;
         if (property_type_id) filters.preferred_type_id_fk = property_type_id;
         if (source_id) filters.source_id_fk = source_id;
@@ -56,7 +56,7 @@ export const getLeadsByAgent = asyncHandler(async (req, res, next) => {
     }
 });
 
-// Create an interaction entry this willdone by sale agent only
+// Create an interaction entry this will done by sale agent only
 export const logInteraction = asyncHandler(async (req, res, next) => {
     try {
         const { lead_id, type, notes, followup_date, lead_status_id } = req.body;

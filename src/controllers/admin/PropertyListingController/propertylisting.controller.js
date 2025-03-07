@@ -116,11 +116,14 @@ export const GetAllProperties = asyncHandler(async (req, res, next) => {
                 },
             ],
         });
-
         if (!properties || properties.length === 0) {
-            return next(new ApiError(404, "No properties found."));
+            return res.status(404).json({
+                success: false,
+                message: "No properties found.",
+                data: null
+            });
         }
-
+        
         res.status(200).json(
             new ApiResponse(200, properties, "Properties retrieved successfully.")
         );
