@@ -11,8 +11,8 @@ import bcrypt from "bcrypt"; // Use bcryptjs for better compatibility
 import { uploadOnCloudinary } from "../../../utils/Cloudinary.utils.js";
 import { Sequelize } from "sequelize";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
-import { ApiError } from "../../../utils/apiError.utils.js";
-import { ApiResponse } from "../../../utils/apiResponse.utils.js";
+import { ApiError } from "../../../utils/ApiError.utils.js";
+import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import dayjs from "dayjs";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
 

@@ -4,8 +4,8 @@ import PropertyMedia from "../../models/propertymedia.model.js";
 import PropertyType from "../../models/propertytypes.model.js";
 import Leads from "../../models/leads.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
-import { ApiError } from "../../utils/apiError.utils.js";
-import { ApiResponse } from "../../utils/apiResponse.utils.js";
+import { ApiError } from "../../utils/ApiError.utils.js"
+import { ApiResponse } from "../../utils/ApiResponse.utils.js"
 import { Op } from "sequelize";
 
 export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
