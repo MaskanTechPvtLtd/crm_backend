@@ -7,6 +7,7 @@ import { asyncHandler } from "../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../utils/ApiError.utils.js"
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
 import { Op } from "sequelize";
+import { sendNotification } from "../../utils/sendNotification.utils.js";
 
 export const managersAllLeads = asyncHandler(async (req, res, next) => {
     try {
@@ -85,17 +86,13 @@ export const ManagerAssignLeadstoAgent = asyncHandler(async (req, res, next) => 
         const { manager_id } = req.params;
         const { agent_id, lead_id } = req.body;
 
-        // Validate manager_id
+        // Validate IDs
         if (!manager_id || isNaN(manager_id)) {
             return next(new ApiError(400, "Invalid manager ID."));
         }
-
-        // Validate agent_id
         if (!agent_id || isNaN(agent_id)) {
             return next(new ApiError(400, "Invalid agent ID."));
         }
-
-        // Validate lead_id
         if (!lead_id || isNaN(lead_id)) {
             return next(new ApiError(400, "Invalid lead ID."));
         }
@@ -106,23 +103,54 @@ export const ManagerAssignLeadstoAgent = asyncHandler(async (req, res, next) => 
         });
 
         if (!agent) {
-            return next(new ApiError(400, "The agent is not under this manager."));
+            return next(new ApiError(403, "The agent is not under this manager or is inactive."));
         }
 
-        // 🔹 Update the lead with the new agent ID
-        const updatedLead = await Lead.update(
+        // 🔹 Check if the lead exists
+        const lead = await Lead.findOne({ where: { lead_id } });
+        if (!lead) {
+            return next(new ApiError(404, "Lead not found."));
+        }
+
+        // 🔹 Check if the lead is already assigned to this agent
+        if (lead.assigned_to_fk === agent_id) {
+            return next(new ApiError(400, "Lead is already assigned to this agent."));
+        }
+
+        // 🔹 Assign lead to agent
+        const [updatedCount] = await Lead.update(
             { assigned_to_fk: agent_id },
-            { where: { lead_id: lead_id } }
+            { where: { lead_id, assigned_to_fk: manager_id } } // Ensuring only leads assigned to this manager get updated
         );
-
-        if (!updatedLead) {
-            return next(new ApiError(400, "Failed to assign the lead to the agent."));
+        await sendNotification({
+            recipientUserId: agent_id,
+            senderId: manager_id,
+            entityType: "Lead",
+            entityId: lead_id,
+            notificationType: "Assignment",
+            title: "New Lead Assignment",
+            message: `You have been assigned a new Lead ${lead.first_name}. Please review the details.`,
+        });
+        if (updatedCount === 0) {
+            return next(new ApiError(500, "Failed to assign the lead to the agent."));
         }
 
-        return res.status(200).json(new ApiResponse(200, [], "Lead assigned to the agent successfully."));
+        // Fetch updated lead data
+        const updatedLead = await Lead.findOne({ where: { lead_id } });
+
+        return res.status(200).json(new ApiResponse(200, updatedLead, "Lead assigned to the agent successfully."));
     } catch (error) {
-        console.error("Error assigning lead to agent:", error);
-        return next(new ApiError(500, "Something went wrong while assigning the lead to the agent."));
+        logger.error("Error assigning lead to agent", { error: error.message });
+
+        if (error instanceof ApiError) {
+            return next(error);
+        }
+
+        if (error.name === "SequelizeValidationError") {
+            return next(new ApiError(400, "Validation error", error.errors));
+        }
+
+        return next(new ApiError(500, "Internal Server Error"));
     }
-}
-);
+});
+

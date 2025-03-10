@@ -316,7 +316,7 @@ export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
 
     // 🔹 Check if the property is already assigned
     if (property.assign_to) {
-        return next(new ApiError(400, `Property ${property.title} is already assigned to agent ID ${property.assign_to}.`));
+        return next(new ApiError(400 , `Property ${property.title} is already assigned to agent ID ${property.assign_to}.`));
     }
 
     // Get the logged-in user's ID from the JWT middleware
