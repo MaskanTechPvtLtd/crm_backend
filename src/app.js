@@ -67,6 +67,7 @@ app.use("/api/v1/team", TeamDetailsRoutes)
 
 //manager routes
 app.use("/api/v1/manager", ManagerLeadsRoutes);
+// app.use("/api/v1/manager", ManagerLeadsRoutes);
 
 
 // Error logger middleware (should be after all other middlewares and routes)

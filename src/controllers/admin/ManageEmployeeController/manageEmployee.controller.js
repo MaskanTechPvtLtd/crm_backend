@@ -439,7 +439,7 @@ export const GetTeamDetailsByManager = asyncHandler(async (req, res, next) => {
     // Fetch employees under the given manager
     const employees = await Employee.findAll({
         where: { manager_id, is_active: true },
-        attributes: ["employee_id", "first_name", "last_name", "email", "phone", "role"]
+        attributes: ["employee_id", "first_name", "last_name", "email", "phone", "profile_picture", "role"]
     });
 
     if (!employees || employees.length === 0) {

@@ -81,7 +81,6 @@ export const logInteraction = asyncHandler(async (req, res, next) => {
         if (!loggedInEmployee) {
             return next(new ApiError(404, "Employee not found in records."));
         }
-
         // Step 2: Ensure only agents can log interactions  
         if (loggedInEmployee.role !== "Sales Agent") {
             return next(new ApiError(403, "Only agents can log lead interactions."));
@@ -126,7 +125,7 @@ export const logInteraction = asyncHandler(async (req, res, next) => {
                 entityId: lead_id,
                 notificationType: "Interaction Update",
                 title: "New Interaction Added",
-                message: `A Sales Agent has added an interaction on a lead '${lead.first_name}'and updated the status to '${statusExists.status_name}'. Please review the details.`,
+                message: `A Sales Agent has added an interaction on a lead ${lead.first_name}and updated the status to ${statusExists.status_name}. Please review the details.`,
             });
         }
         // res.status(201).json(
