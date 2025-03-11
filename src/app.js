@@ -16,6 +16,9 @@ import AgentLeadsRoutes from "./routes/sales_agent/allLeads.routes.js"
 import AgentPropertiesRoutes from "./routes/sales_agent/agentproperties.routes.js"
 import TeamDetailsRoutes from "./routes/sales_agent/teamDetails.routes.js"
 import ManagerLeadsRoutes from "./routes/manager/managersleads.router.js"
+import ManagersEmployeesRoutes from "./routes/manager/ManagersEmployee.router.js"
+import ManagerspreoperitesRoutes from "./routes/manager/ManagersProperties.router.js"
+import ManagersFieldAgentsRoutes from "./routes/manager/ManagersFieldAgents.router.js"
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
@@ -67,7 +70,9 @@ app.use("/api/v1/team", TeamDetailsRoutes)
 
 //manager routes
 app.use("/api/v1/manager", ManagerLeadsRoutes);
-// app.use("/api/v1/manager", ManagerLeadsRoutes);
+app.use("/api/v1/manager", ManagersEmployeesRoutes);
+app.use("/api/v1/manager", ManagerspreoperitesRoutes);
+app.use("/api/v1/manager", ManagersFieldAgentsRoutes);
 
 
 // Error logger middleware (should be after all other middlewares and routes)
