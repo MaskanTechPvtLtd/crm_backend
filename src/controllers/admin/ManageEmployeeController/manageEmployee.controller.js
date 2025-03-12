@@ -482,3 +482,73 @@ export const GetTeamDetailsByManager = asyncHandler(async (req, res, next) => {
     return next(new ApiError(500, "Something went wrong while fetching employee details."));
 }
 });
+
+export const GetUnassignedEmployees = asyncHandler(async (req, res, next) => {
+  try {
+    // Fetch employees without a manager, excluding admins
+    const employees = await Employee.findAll({
+      where: { manager_id: null, role: { [Op.not]: "Admin" } }, // Exclude admins
+      attributes: ["employee_id", "first_name", "last_name", "profile_picture", "phone", "role"],
+    });
+
+    if (!employees || employees.length === 0) {
+      return next(new ApiError(404, "No unassigned employees found."));
+    }
+
+    // Group employees by role
+    const groupedEmployees = employees.reduce((acc, employee) => {
+      const { role } = employee;
+      if (!acc[role]) {
+        acc[role] = [];
+      }
+      acc[role].push(employee);
+      return acc;
+    }, {});
+
+    res.json(new ApiResponse(200, groupedEmployees, "Success"));
+  } catch (err) {
+    console.error("Error fetching unassigned employees:", err);
+    next(new ApiError(500, "Something went wrong while fetching unassigned employees."));
+  }
+});
+
+export const GetUnassignedLeads = asyncHandler(async (req, res, next) => {
+  try {
+    const leads = await Leads.findAll({
+      where: { assigned_to_fk: null },
+      attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk"],
+    });
+
+    if (!leads || leads.length === 0) {
+      return next(new ApiError(404, "No unassigned leads found."));
+    }
+
+    res.json(new ApiResponse(200, leads, "Success"));
+  } catch (err) {
+    console.error("Error fetching unassigned leads:", err);
+    next(new ApiError(500, "Something went wrong while fetching unassigned leads."));
+  }
+});
+
+export const GetUnassignedProperties = asyncHandler(async (req, res, next) => {
+  try {
+    const properties = await Properties.findAll({
+      where: { assign_to: null },
+      include: [
+        { model: PropertyType, as: "propertyType", attributes: ["type_name"] },
+        { model: PropertyMedia, as: "propertyMedia", attributes: ["media_type", "file_url"] },
+      ],
+      attributes: ["property_id", "title", "address", "city", "state", "price", "bedrooms", "bathrooms"],
+    });
+
+    if (!properties || properties.length === 0) {
+      return next(new ApiError(404, "No unassigned properties found."));
+    }
+
+    res.json(new ApiResponse(200, properties, "Success"));
+  } catch (err) {
+    console.error("Error fetching unassigned properties:", err);
+    next(new ApiError(500, "Something went wrong while fetching unassigned properties."));
+  }
+}
+);

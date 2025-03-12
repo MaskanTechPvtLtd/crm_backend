@@ -1,7 +1,21 @@
 import express from "express";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import { upload } from "../../middlewares/multer.middleware.js";
-import { GetAllEmployees, GetEmployeebyId, UpdateEmployee, DeleteEmployee, SearchEmployee, assignAgentToManager, GetEmployeeByManager, getEmployeeWithAttendance, GetTeamByManagers, GetTeamDetailsByManager } from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
+import {
+    GetAllEmployees,
+    GetEmployeebyId,
+    UpdateEmployee,
+    DeleteEmployee,
+    SearchEmployee,
+    assignAgentToManager,
+    GetEmployeeByManager,
+    getEmployeeWithAttendance,
+    GetTeamByManagers,
+    GetTeamDetailsByManager,
+    GetUnassignedEmployees,
+    GetUnassignedProperties,
+    GetUnassignedLeads,
+} from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
 
 const router = express.Router();
 
@@ -16,5 +30,8 @@ router.get("/getEmployeeByManager/:id", verifyJWT, GetEmployeeByManager);
 router.get("/employees/:id/attendance", verifyJWT, getEmployeeWithAttendance);
 router.get("/getTeams", verifyJWT, GetTeamByManagers);
 router.get("/getTeamDetails/:manager_id", verifyJWT, GetTeamDetailsByManager);
+router.get("/get-unassign-employees", verifyJWT, GetUnassignedEmployees);
+router.get("/get-unassign-leads", verifyJWT, GetUnassignedLeads);
+router.get("/get-unassign-properties", verifyJWT, GetUnassignedProperties);
 
 export default router; 
