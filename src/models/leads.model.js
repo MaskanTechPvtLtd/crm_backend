@@ -86,10 +86,10 @@ const Lead = sequelize.define(
   }
 );
 
-// Define associations
-Lead.belongsTo(Employee, { foreignKey: "assigned_to_fk", onDelete: "SET NULL" });
-Lead.belongsTo(PropertyType, { foreignKey: "preferred_type_id_fk", onDelete: "SET NULL" });
-Lead.belongsTo(LeadSource, { foreignKey: "source_id_fk", onDelete: "SET NULL" });
-Lead.belongsTo(Status, { foreignKey: "status_id_fk", onDelete: "SET NULL" });
+// // Define associations
+// Lead.belongsTo(Employee, { foreignKey: "assigned_to_fk", onDelete: "SET NULL" });
+// Lead.belongsTo(PropertyType, { foreignKey: "preferred_type_id_fk", onDelete: "SET NULL" });
+// Lead.belongsTo(LeadSource, { foreignKey: "source_id_fk", onDelete: "SET NULL" });
+// Lead.belongsTo(Status, { foreignKey: "status_id_fk", onDelete: "SET NULL" });
 
 export default Lead;

@@ -53,7 +53,7 @@ const Task = sequelize.define(
 );
 
 // Define associations
-Task.belongsTo(Employee, { as: "Creator", foreignKey: "created_by", onDelete: "CASCADE" });
-Task.belongsTo(Status, { foreignKey: "status_id", onDelete: "SET NULL" });
+// Task.belongsTo(Employee, { as: "Creator", foreignKey: "created_by", onDelete: "CASCADE" });
+// Task.belongsTo(Status, { foreignKey: "status_id", onDelete: "SET NULL" });
 
 export default Task;

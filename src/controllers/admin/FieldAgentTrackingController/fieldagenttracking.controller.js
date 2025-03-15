@@ -3,6 +3,7 @@ import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import Employee from "../../../models/employee.model.js";
 import EmployeeLocation from "../../../models/employeelocations.model.js";
+import { Op } from "sequelize";
 
 // ✅ Add Employee Location this will at sales agent side 
 export const addEmployeeLocation = asyncHandler(async (req, res, next) => {
@@ -31,18 +32,25 @@ export const addEmployeeLocation = asyncHandler(async (req, res, next) => {
 
 // ✅ Get All Employee Locations
 export const getAllEmployeeLocations = asyncHandler(async (req, res, next) => {
-    const locations = await EmployeeLocation.findAll({
-        include: [
-            {
-                model: Employee,
-                attributes: ["first_name", "last_name", "role"],
+    try {
+        const employees = await Employee.findAll({
+            where: {
+                role: { [Op.ne]: "Admin" }, // Exclude employees with role "Admin"
             },
-        ],
-    });
+            include: [
+                {
+                    model: EmployeeLocation,
+                    as: "locations", // Ensure this matches your model association
+                    attributes: ["latitude", "longitude", "timestamp"],
+                },
+            ],
+        });
 
-    return res.status(200).json(new ApiResponse(200, locations));
+        return res.status(200).json(new ApiResponse(200, employees));
+    } catch (error) {
+        return next(new ApiError(500, "Failed to fetch employee locations", error));
+    }
 });
-
 
 // ✅ Get Locations for a Specific Employee
 export const getEmployeeLocationsById = asyncHandler(async (req, res, next) => {

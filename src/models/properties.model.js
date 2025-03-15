@@ -3,10 +3,10 @@ import { sequelize } from "../db/index.js"; // Adjust the path based on your set
 import Employee from "./employee.model.js";
 import PropertyType from "./propertytypes.model.js";
 import Status from "./statuses.model.js";
-import PropertyMedia from "./propertymedia.model.js";
+// import PropertyMedia from "./propertymedia.model.js";
 
-const Property = sequelize.define(
-  "Property",
+const Properties = sequelize.define(
+  "Properties",
   {
     property_id: {
       type: DataTypes.INTEGER,
@@ -98,10 +98,10 @@ const Property = sequelize.define(
   }
 );
 
-// Associations
-Property.hasMany(PropertyMedia, { foreignKey: "property_id", as: "propertyMedia" });
-Property.belongsTo(Employee, { foreignKey: "listed_by", as: "listedBy" });
-Property.belongsTo(PropertyType, { foreignKey: "property_type_id", as: "propertyType" });
-Property.belongsTo(Status, { foreignKey: "status_id", as: "status" });
+// // Associations
+// Properties.hasMany(PropertyMedia, { foreignKey: "property_id", as: "propertyMedia" });
+// Properties.belongsTo(Employee, { foreignKey: "listed_by", as: "listedBy" });
+// Properties.belongsTo(PropertyType, { foreignKey: "property_type_id", as: "propertyType" });
+// Properties.belongsTo(Status, { foreignKey: "status_id", as: "status" });
  
-export default Property;
+export default Properties;

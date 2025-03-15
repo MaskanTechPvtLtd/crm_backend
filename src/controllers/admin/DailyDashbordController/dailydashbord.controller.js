@@ -4,7 +4,7 @@ import Employee from "../../../models/employee.model.js";
 import Status from "../../../models/statuses.model.js";
 import LeadSource from "../../../models/leadsources.model.js";
 import Interaction from "../../../models/interactions.model.js";
-import Property from "../../../models/properties.model.js";
+import Properties from "../../../models/properties.model.js";
 import Task from "../../../models/task.model.js";
 import LeadStatus from "../../../models/leadstatus.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
@@ -37,7 +37,7 @@ export const getAdminDailyDetailedReport = asyncHandler(async (req, res, next) =
                 }
             }
         });
-        const totalPropertyListed = await Property.count({ where: { created_at: { [Op.between]: [startDate, endDate] } } });
+        const totalPropertyListed = await Properties.count({ where: { created_at: { [Op.between]: [startDate, endDate] } } });
         const totalEmployees = await Employee.count(); // Count all employees
         const totalActiveEmployees = await Employee.count({ where: { is_active: true } }); // Count active employees
         const activePercentage = ((totalActiveEmployees / totalEmployees) * 100).toFixed(2); // Optional: Get percentage
@@ -68,11 +68,11 @@ export const getAdminDailyDetailedReport = asyncHandler(async (req, res, next) =
 
 
         // /** 📊 3. Pie Chart Data - Properties by Status */
-        const propertyStatuses = await Property.findAll({
+        const propertyStatuses = await Properties.findAll({
             attributes: [
                 "status_id",
-                [Sequelize.fn("COUNT", Sequelize.col("Property.status_id")), "count"]], // Explicitly reference Property.status_id
-            group: ["Property.status_id", "status.status_id", "status.status_name"], // Ensure all selected fields are in GROUP BY
+                [Sequelize.fn("COUNT", Sequelize.col("Properties.status_id")), "count"]], // Explicitly reference Properties.status_id
+            group: ["Properties.status_id", "status.status_id", "status.status_name"], // Ensure all selected fields are in GROUP BY
             include: [
                 {
                     model: Status,

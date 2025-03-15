@@ -51,6 +51,6 @@ const Attendance = sequelize.define(
 );
 
 // Define associations
-Attendance.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
+// Attendance.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
 
 export default Attendance;

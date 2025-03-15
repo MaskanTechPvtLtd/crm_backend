@@ -12,7 +12,7 @@ const EmployeeLocation = sequelize.define(
     },
     employee_id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: Employee,
         key: "employee_id",
@@ -44,6 +44,6 @@ const EmployeeLocation = sequelize.define(
 );
 
 // Define associations
-EmployeeLocation.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
+// EmployeeLocation.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
 
 export default EmployeeLocation;

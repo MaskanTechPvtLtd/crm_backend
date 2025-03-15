@@ -45,7 +45,7 @@ const UserAuth = sequelize.define(
 );
 
 // Define association
-UserAuth.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
+// UserAuth.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE", onUpdate: "CASCADE" });
 
 // Generate Access Token
 UserAuth.prototype.generateAccessToken = function (Employee) {
@@ -53,6 +53,7 @@ UserAuth.prototype.generateAccessToken = function (Employee) {
     {
       user_id: this.user_id,
       username: this.username,
+      employee_id: Employee.employee_id,
       email: Employee.email,
       role: Employee.role,
     },
@@ -68,6 +69,7 @@ UserAuth.prototype.generateRefreshToken = function () {
   return jwt.sign(
     {
       user_id: this.user_id,
+      employee_id: Employee.employee_id,
     },
     process.env.REFRESH_TOKEN_SECRET,
     {

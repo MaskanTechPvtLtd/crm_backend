@@ -4,7 +4,7 @@ import Employee from "../../models/employee.model.js";
 import Status from "../../models/statuses.model.js";
 import LeadSource from "../../models/leadsources.model.js";
 import Interaction from "../../models/interactions.model.js";
-import Property from "../../models/properties.model.js";
+import Properties from "../../models/properties.model.js";
 import Task from "../../models/task.model.js";
 import LeadStatus from "../../models/leadstatus.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
@@ -38,7 +38,7 @@ export const GetManagerDailyDetailedReport = asyncHandler(async (req, res, next)
         const totalNewLeads = await Lead.count({ where: { assigned_to_fk: employeeIds, created_at: { [Op.between]: [startDate, endDate] } } });
         const closedStatus = await LeadStatus.findOne({ where: { status_name: 'closed' } });
         const totalClosedDeals = await Lead.count({ where: { assigned_to_fk: employeeIds, status_id_fk: closedStatus.status_id, created_at: { [Op.between]: [startDate, endDate] } } });
-        const totalPropertyListed = await Property.count({ where: { listed_by: employeeIds, created_at: { [Op.between]: [startDate, endDate] } } });
+        const totalPropertyListed = await Properties.count({ where: { listed_by: employeeIds, created_at: { [Op.between]: [startDate, endDate] } } });
         const totalEmployees = employeeIds.length;
         const totalActiveEmployees = await Employee.count({ where: { employee_id: employeeIds, is_active: true } });
         const activePercentage = ((totalActiveEmployees / totalEmployees) * 100).toFixed(2);
@@ -53,13 +53,13 @@ export const GetManagerDailyDetailedReport = asyncHandler(async (req, res, next)
         const leadStatusData = leadStatuses.map(s => ({ status: s.LeadStatus.status_name, count: s.get("count") }));
 
         /** 📊 3. Pie Chart Data - Properties by Status */
-        const propertyStatuses = await Property.findAll({
+        const propertyStatuses = await Properties.findAll({
             attributes: [
                 "status_id",
-                [Sequelize.fn("COUNT", Sequelize.col("Property.status_id")), "count"]
+                [Sequelize.fn("COUNT", Sequelize.col("Properties.status_id")), "count"]
             ],
             where: { listed_by: employeeIds },
-            group: ["Property.status_id", "status.status_id", "status.status_name"],
+            group: ["Properties.status_id", "status.status_id", "status.status_name"],
             include: [{ model: Status, as: "status", attributes: ["status_name"] }],
         });
         

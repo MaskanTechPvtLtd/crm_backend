@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { connectSequelize } from "./db/index.js";
 import { app } from "./app.js";
 import { PORT } from "./constants.js";
+import  syncDatabase  from "./utils/dbSync.js";
 
 dotenv.config({
   path: "./.env",
@@ -12,6 +13,7 @@ connectSequelize()
     app.on("error", (err) => {
       console.error(`Run up with some error: ${err}`);
     });
+    syncDatabase();
 
     app.listen(PORT, () => {
       console.log(`🔥 Server is running on port: ${PORT}`);

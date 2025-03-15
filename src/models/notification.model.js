@@ -64,7 +64,7 @@ const Notification = sequelize.define(
 );
 
 // Associations
-Notification.belongsTo(Employee, { foreignKey: "user_id", as: "recipient" });
-Notification.belongsTo(Employee, { foreignKey: "sender_id", as: "sender" });
+// Notification.belongsTo(Employee, { foreignKey: "user_id", as: "recipient" });
+// Notification.belongsTo(Employee, { foreignKey: "sender_id", as: "sender" });
 
 export default Notification;

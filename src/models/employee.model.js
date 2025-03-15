@@ -46,7 +46,7 @@ const Employee = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: "Employee", // Self-referencing foreign key
+        model: "employee", // Self-referencing foreign key
         key: "employee_id",
       },
       onDelete: "SET NULL",

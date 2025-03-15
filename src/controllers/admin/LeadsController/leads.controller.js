@@ -7,7 +7,7 @@ import LeadSource from "../../../models/leadsources.model.js";
 import Lead from "../../../models/leads.model.js"
 import Employee from "../../../models/employee.model.js";
 import PropertyType from "../../../models/propertytypes.model.js";
-import Status from "../../../models/leadstatus.model.js";
+import LeadStatus from "../../../models/leadstatus.model.js";
 import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
@@ -57,7 +57,7 @@ export const AddNewLead = asyncHandler(async (req, res, next) => {
       include: [
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
-        { model: Status, attributes: ["status_id", "status_name"] },
+        { model: LeadStatus, attributes: ["status_id", "status_name"] },
       ],
     });
 
@@ -78,7 +78,7 @@ export const GetLeadById = asyncHandler(async (req, res, next) => {
         { model: Employee, attributes: ["employee_id", "first_name", "last_name"] },
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
-        { model: Status, attributes: ["status_id", "status_name"] },
+        { model: LeadStatus, attributes: ["status_id", "status_name"] },
       ],
     });
 
@@ -111,7 +111,7 @@ export const GetAllLeads = asyncHandler(async (req, res, next) => {
         { model: Employee, attributes: ["employee_id", "first_name", "last_name"] },
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
-        { model: Status, attributes: ["status_id", "status_name"] },
+        { model: LeadStatus, attributes: ["status_id", "status_name"] },
       ],
     });
 
@@ -223,12 +223,12 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
   try {
     const { lead_id } = req.params;
 
-    // Step 1: Check if the lead exists
+    // Check if the lead exists
     const lead = await Lead.findByPk(lead_id, {
       include: [
         {
-          model: Status, // Assuming Status is the model representing lead statuses
-          attributes: ["status_id", "status_name"], // Fetch status details
+          model: LeadStatus, // Assuming this is correct
+          attributes: ["status_id", "status_name"],
         },
       ],
     });
@@ -237,26 +237,42 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
       return next(new ApiError(404, "Lead not found."));
     }
 
-    // Step 2: Fetch interactions for the lead
+    // Fetch interactions
     const interactions = await Interaction.findAll({
       where: { lead_id },
+      attributes: { exclude: ["interaction_status_id"] },
       include: [
         {
           model: Employee,
           attributes: ["employee_id", "first_name", "last_name"],
         },
+        {
+          model: LeadStatus,
+          attributes: ["status_name"],
+          as: "status",
+        },
       ],
       order: [["created_at", "DESC"]],
+      raw: true, // ✅ Returns flat JSON data instead of nested objects
+      nest: true, // ✅ Ensures Employee object remains intact
     });
-console.log(lead.status_name)
+    
+    // ✅ Move status_name from status object to the main object
+    const formattedInteractions = interactions.map(interaction => ({
+      ...interaction,
+      status_name: interaction["status.status_name"], // Move status_name to main object
+    }));
+    
     res.status(200).json(
-      new ApiResponse(200, { lead_status: lead.LeadStatus.status_name, interactions }, "Lead interactions and status retrieved successfully.")
+      new ApiResponse(200, { lead_status: lead.LeadStatus.status_name, interactions: formattedInteractions }, "Lead interactions and status retrieved successfully.")
     );
+    
   } catch (error) {
     console.error("Error fetching interactions:", error);
     next(new ApiError(500, "Something went wrong while fetching interactions."));
   }
 });
+
 
 export const DeleteLead = asyncHandler(async (req, res, next) => {
   try {

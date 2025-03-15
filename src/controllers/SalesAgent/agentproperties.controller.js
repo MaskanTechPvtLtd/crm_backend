@@ -1,4 +1,4 @@
-import Property from "../../models/properties.model.js";
+import Properties from "../../models/properties.model.js";
 import PropertyType from "../../models/propertytypes.model.js";
 import PropertyMedia from "../../models/propertymedia.model.js";
 import Employee from "../../models/employee.model.js";
@@ -27,7 +27,7 @@ export const getPropertiesByAgent = asyncHandler(async (req, res, next) => {
         if (property_type_id) filters.property_type_id = property_type_id;
 
         // Fetch properties assigned to the given agent with applied filters
-        const properties = await Property.findAll({
+        const properties = await Properties.findAll({
             where: filters, // Apply filters dynamically
             include: [
                 {
@@ -79,13 +79,13 @@ export const UpdatePropertyStatus = asyncHandler(async (req, res, next) => {
         }
 
         // Find the property and check if it exists
-        const property = await Property.findOne({
+        const property = await Properties.findOne({
             where: { property_id },
             include: [{ model: Status, as: "status", attributes: ["status_name"] }]
         });
 
         if (!property) {
-            return next(new ApiError(404, "Property not found."));
+            return next(new ApiError(404, "Properties not found."));
         }
 
         // Update the property status
@@ -128,14 +128,14 @@ export const UpdatePropertyStatus = asyncHandler(async (req, res, next) => {
         await sendNotification({
             recipientUserId: admin.employee_id,
             senderId: loggedInEmployeeId,
-            entityType: "Property",
+            entityType: "Properties",
             entityId: property_id,
             notificationType: "Status Update",
             title: "Property Status Updated",
             message: notificationMessage
         });
 
-        return res.status(200).json(new ApiResponse(200, property, `Property status updated to "${updatedStatus.status_name}" successfully.`));
+        return res.status(200).json(new ApiResponse(200, property, `Properties status updated to "${updatedStatus.status_name}" successfully.`));
     } catch (error) {
         console.error("Error updating property status:", error);
         return next(new ApiError(500, "Something went wrong while updating property status."));

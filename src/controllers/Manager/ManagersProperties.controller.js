@@ -1,4 +1,4 @@
-import Property from "../../models/properties.model.js";
+import Properties from "../../models/properties.model.js";
 import PropertyMedia from "../../models/propertymedia.model.js";
 import PropertyType from "../../models/propertytypes.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
@@ -26,7 +26,7 @@ export const getPropertiesByManager = asyncHandler(async (req, res, next) => {
         if (property_type_id) filters.property_type_id = property_type_id;
 
         // Fetch properties assigned to the given agent with applied filters
-        const properties = await Property.findAll({
+        const properties = await Properties.findAll({
             where: filters, // Apply filters dynamically
             include: [
                 {
@@ -74,12 +74,12 @@ export const AssignPropertyToEmployee = asyncHandler(async (req, res, next) => {
         }
 
         // 🔹 Find the property
-        const property = await Property.findByPk(property_id, {
+        const property = await Properties.findByPk(property_id, {
             attributes: ["property_id", "title", "assign_to"],
         });
 
         if (!property) {
-            return next(new ApiError(404, "Property not found."));
+            return next(new ApiError(404, "Properties not found."));
         }
 
         // 🔹 Get the logged-in user's ID from JWT
@@ -126,7 +126,7 @@ export const AssignPropertyToEmployee = asyncHandler(async (req, res, next) => {
         }
 
         // 🔹 Assign the property to the Sales Agent
-        await Property.update(
+        await Properties.update(
             { assign_to: agent_id },
             { where: { property_id } }
         );
@@ -135,10 +135,10 @@ export const AssignPropertyToEmployee = asyncHandler(async (req, res, next) => {
         await sendNotification({
             recipientUserId: agent_id,
             senderId: manager.employee_id,
-            entityType: "Property",
+            entityType: "Properties",
             entityId: property_id,
             notificationType: "Assignment",
-            title: "New Property Assignment",
+            title: "New Properties Assignment",
             message: `You have been assigned a new property "${property.title}". Please review the details.`,
         });
 
@@ -151,7 +151,7 @@ export const AssignPropertyToEmployee = asyncHandler(async (req, res, next) => {
                     agent_id: agent.employee_id,
                     agent_name: `${agent.first_name} ${agent.last_name}`,
                 },
-            }, "Property assigned to agent successfully.")
+            }, "Properties assigned to agent successfully.")
         );
     } catch (error) {
         console.error("Error assigning property to agent:", error);

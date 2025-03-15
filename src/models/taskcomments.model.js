@@ -45,7 +45,7 @@ const TaskComment = sequelize.define(
 );
 
 // Define associations
-TaskComment.belongsTo(Task, { foreignKey: "task_id", as: "task" });
-TaskComment.belongsTo(Employee, { foreignKey: "employee_id", as: "employee" });
+// TaskComment.belongsTo(Task, { foreignKey: "task_id", as: "task" });
+// TaskComment.belongsTo(Employee, { foreignKey: "employee_id", as: "employee" });
 
 export default TaskComment;

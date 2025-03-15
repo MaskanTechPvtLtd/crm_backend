@@ -4,8 +4,8 @@ import PropertyMedia from "../../models/propertymedia.model.js";
 import PropertyType from "../../models/propertytypes.model.js";
 import Leads from "../../models/leads.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
-import { ApiError } from "../../utils/ApiError.utils.js"
-import { ApiResponse } from "../../utils/ApiResponse.utils.js"
+import { ApiError } from "../../utils/ApiError.utils.js";
+import { ApiResponse } from "../../utils/ApiResponse.utils.js";
 import { Op } from "sequelize";
 
 export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
@@ -27,6 +27,11 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
             return next(new ApiError(404, "Agent not found."));
         }
 
+        // Check if manager_id is null (data corruption case)
+        if (!agent.manager_id) {
+            return next(new ApiError(404, "Manager ID is missing for this agent."));
+        }
+
         // Fetch employees under the agent's manager
         const employees = await Employee.findAll({
             where: { manager_id: agent.manager_id, is_active: true },
@@ -40,32 +45,37 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
         // Extract employee IDs
         const employeeIds = employees.map(emp => emp.employee_id);
 
-        // Fetch properties listed by those employees
-        const properties = await Properties.findAll({
-            where: { assign_to: { [Op.in]: employeeIds } },  // Use Op.in for array
-            include: [
-                {
-                    model: PropertyType,
-                    as: "propertyType",
-                    attributes: ["property_type_id", "type_name"]
-                },
-                {
-                    model: PropertyMedia,
-                    as: "propertyMedia",
-                    attributes: ["media_type", "file_url"]
-                },
-            ],
-        });
+        // Ensure we don’t query with an empty array
+        let properties = [];
+        let leads = [];
 
-        // Fetch leads assigned to those employees
-        const leads = await Leads.findAll({
-            where: { assigned_to_fk: { [Op.in]: employeeIds } }, // Use Op.in for array
-            attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
-        });
+        if (employeeIds.length > 0) {
+            // Fetch properties listed by those employees
+            properties = await Properties.findAll({
+                where: { assign_to: { [Op.in]: employeeIds } },
+                include: [
+                    {
+                        model: PropertyType,
+                        as: "propertyType",
+                        attributes: ["property_type_id", "type_name"]
+                    },
+                    {
+                        model: PropertyMedia,
+                        as: "propertyMedia",
+                        attributes: ["media_type", "file_url"]
+                    },
+                ],
+            });
 
-        // Construct response
+            // Fetch leads assigned to those employees
+            leads = await Leads.findAll({
+                where: { assigned_to_fk: { [Op.in]: employeeIds } },
+                attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
+            });
+        }
+
         return res.status(200).json(new ApiResponse(200, {
-            manager_id: agent.manager_id, // Include the manager's ID
+            manager_id: agent.manager_id,
             employees,
             properties,
             leads

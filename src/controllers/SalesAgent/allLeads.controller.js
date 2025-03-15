@@ -109,7 +109,8 @@ export const logInteraction = asyncHandler(async (req, res, next) => {
             employee_id: loggedInEmployee.employee_id, // Agent who logged the interaction
             type, // Interaction type (Call, Email, Meeting, Follow-up)
             notes, // Notes for the interaction
-            followup_date, // Date for follow-up
+            followup_date,
+            interaction_status_id: lead_status_id, // Date for follow-up
         });
 
         // Step 7: Update the lead's status
@@ -128,9 +129,7 @@ export const logInteraction = asyncHandler(async (req, res, next) => {
                 message: `A Sales Agent has added an interaction on a lead ${lead.first_name}and updated the status to ${statusExists.status_name}. Please review the details.`,
             });
         }
-        // res.status(201).json(
-        //     new ApiResponse(201, { status: statusExists.status_name, interaction }, "Interaction logged successfully and lead status updated.")
-        //   );
+     
 
         res.status(201).json(new ApiResponse(201, interaction, "Interaction logged successfully and lead status updated."));
     } catch (error) {

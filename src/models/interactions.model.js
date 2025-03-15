@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../db/index.js"; // Adjust the path based on your setup
 import Employee from "./employee.model.js";
 import Lead from "./leads.model.js";
+import LeadStatus from "./leadstatus.model.js";
 
 const Interaction = sequelize.define(
   "Interaction",
@@ -41,6 +42,15 @@ const Interaction = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
+    interaction_status_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: LeadStatus,
+        key: "status_id",
+      },
+      onDelete: "SET NULL",
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -52,8 +62,8 @@ const Interaction = sequelize.define(
   }
 );
 
-// Define associations
-Interaction.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
-Interaction.belongsTo(Lead, { foreignKey: "lead_id", onDelete: "CASCADE" });
+// // Define associations
+// Interaction.belongsTo(Employee, { foreignKey: "employee_id", onDelete: "CASCADE" });
+// Interaction.belongsTo(Lead, { foreignKey: "lead_id", onDelete: "CASCADE" });
 
 export default Interaction;

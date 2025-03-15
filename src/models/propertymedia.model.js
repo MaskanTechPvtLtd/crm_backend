@@ -1,6 +1,6 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../db/index.js"; // Adjust the path based on your setup
-import Property from "./properties.model.js";
+// import Properties from "./properties.model.js";
 
 const PropertyMedia = sequelize.define(
   "PropertyMedia",
@@ -13,7 +13,7 @@ const PropertyMedia = sequelize.define(
     property_id: {
       type: DataTypes.INTEGER,
       references: {
-        model: "Property",
+        model: "properties",
         key: "property_id",
       },
       onDelete: "CASCADE",
@@ -39,6 +39,6 @@ const PropertyMedia = sequelize.define(
 );
 
 // Associations
-// PropertyMedia.belongsTo(Property, { foreignKey: "property_id", as: "property" });
+// PropertyMedia.belongsTo(Properties, { foreignKey: "property_id", as: "property" });
 
 export default PropertyMedia;
