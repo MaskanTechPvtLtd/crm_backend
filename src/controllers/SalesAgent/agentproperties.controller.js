@@ -32,7 +32,7 @@ export const getPropertiesByAgent = asyncHandler(async (req, res, next) => {
             include: [
                 {
                     model: PropertyType,
-                    as: "propertyType",
+                    as: "PropertyType",
                     attributes: ["property_type_id", "type_name"]
                 },
                 {

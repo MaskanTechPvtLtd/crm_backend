@@ -3,7 +3,7 @@ import Employee from "../models/employee.model.js";
 import Statuses from "../models/statuses.model.js";
 
 export const TasksAssociation = () => {
-  Tasks.belongsTo(Employee, { foreignKey: "assigned_to" });
-  Tasks.belongsTo(Employee, { foreignKey: "created_by" });
-  Tasks.belongsTo(Statuses, { foreignKey: "status_id" });
+  Tasks.belongsTo(Employee, { as: "Creator", foreignKey: "created_by", onDelete: "CASCADE" });
+  Tasks.belongsTo(Statuses, { foreignKey: "status_id", onDelete: "SET NULL" });
+
 };
