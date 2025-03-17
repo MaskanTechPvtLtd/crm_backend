@@ -10,17 +10,34 @@ import { Op } from "sequelize";
 
 export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
     try {
+        // Check authentication
+        if (!req.user) {
+            return next(new ApiError(401, "Unauthorized access."));
+        }
+
         const { agent_id } = req.params;
 
         // Validate agent_id
-        if (!agent_id || isNaN(agent_id)) {
+        if (!agent_id || isNaN(agent_id) || parseInt(agent_id) <= 0) {
             return next(new ApiError(400, "Invalid agent ID."));
+        }
+
+        const agentIdNum = parseInt(agent_id);
+
+        // Check authorization (assuming req.user has employee_id and role)
+        if (req.user.employee_id !== agentIdNum && req.user.role !== 'manager') {
+            return next(new ApiError(403, "Forbidden: You do not have access to this resource."));
         }
 
         // Fetch the agent and their manager ID
         const agent = await Employee.findOne({
-            where: { employee_id: agent_id, is_active: true },
+            where: { 
+                employee_id: agentIdNum, 
+                is_active: true 
+            },
             attributes: ["employee_id", "manager_id"]
+        }).catch(error => {
+            throw new ApiError(500, "Database error while fetching agent");
         });
 
         if (!agent) {
@@ -29,13 +46,18 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
 
         // Check if manager_id is null (data corruption case)
         if (!agent.manager_id) {
-            return next(new ApiError(404, "Manager ID is missing for this agent."));
+            return next(new ApiError(404, "Agent does not have a valid manager assigned."));
         }
 
         // Fetch employees under the agent's manager
         const employees = await Employee.findAll({
-            where: { manager_id: agent.manager_id, is_active: true },
+            where: { 
+                manager_id: agent.manager_id, 
+                is_active: true 
+            },
             attributes: ["employee_id", "first_name", "last_name", "email", "phone", "role"]
+        }).catch(error => {
+            throw new ApiError(500, "Database error while fetching employees");
         });
 
         if (!employees || employees.length === 0) {
@@ -45,7 +67,6 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
         // Extract employee IDs
         const employeeIds = employees.map(emp => emp.employee_id);
 
-        // Ensure we don’t query with an empty array
         let properties = [];
         let leads = [];
 
@@ -65,12 +86,16 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
                         attributes: ["media_type", "file_url"]
                     },
                 ],
+            }).catch(error => {
+                throw new ApiError(500, "Database error while fetching properties");
             });
 
             // Fetch leads assigned to those employees
             leads = await Leads.findAll({
                 where: { assigned_to_fk: { [Op.in]: employeeIds } },
                 attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
+            }).catch(error => {
+                throw new ApiError(500, "Database error while fetching leads");
             });
         }
 
@@ -80,8 +105,13 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
             properties,
             leads
         }, "Employees, properties, and leads retrieved successfully."));
+
     } catch (error) {
-        console.error("Error fetching employees details:", error);
+        // If error is already an ApiError, pass it through
+        if (error instanceof ApiError) {
+            return next(error);
+        }
+        console.error("Error fetching team details:", error);
         return next(new ApiError(500, "Something went wrong while fetching employee details."));
     }
 });
