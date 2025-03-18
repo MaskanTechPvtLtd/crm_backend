@@ -15,6 +15,7 @@ import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import dayjs from "dayjs";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
+import { getLoggedInUserRole } from "../../../utils/LoggedInUser.utils.js";
 
 
 export const GetAllEmployees = asyncHandler(async (req, res, next) => {
@@ -176,15 +177,33 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
 
 export const assignAgentToManager = asyncHandler(async (req, res, next) => {
   try {
-    const { agent_id, manager_id } = req.body;
+    const { agent_ids, manager_id } = req.body;
+
+    // Validate input
+    if (!Array.isArray(agent_ids) || agent_ids.length === 0) {
+      return next(new ApiError(400, "agent_ids must be a non-empty array"));
+    }
+    if (!manager_id) {
+      return next(new ApiError(400, "manager_id is required"));
+    }
+
+    // Ensure all agent_ids are valid (not undefined, null, or non-numeric)
+    const validAgentIds = agent_ids.filter(id => id !== undefined && id !== null && !isNaN(id));
+    if (validAgentIds.length !== agent_ids.length) {
+      const invalidIds = agent_ids.filter(id => !validAgentIds.includes(id));
+      return next(new ApiError(400, `Invalid agent_ids provided: ${invalidIds.join(', ')}`));
+    }
 
     // Get the user ID from the request (from `verifyJWT` middleware)
-    const loggedInUserId = req.user.user_id; // Ensure `req.user` contains `user_id`
+    const loggedInUserId = req.user.user_id;
+    if (!loggedInUserId) {
+      return next(new ApiError(401, "User not authenticated"));
+    }
 
     // Step 1: Retrieve the `employee_id` from the `user_id` table
     const userRecord = await UserAuth.findOne({
       where: { user_id: loggedInUserId },
-      attributes: ["employee_id"], // Only fetch the `employee_id`
+      attributes: ["employee_id"],
     });
 
     if (!userRecord || !userRecord.employee_id) {
@@ -193,17 +212,17 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
 
     const loggedInEmployeeId = userRecord.employee_id;
 
-    // Step 2: Find the logged-in employee (Admin) in the Employee table
+    // Step 2: Find the logged-in employee (Admin)
     const loggedInEmployee = await Employee.findOne({
       where: { employee_id: loggedInEmployeeId },
-      attributes: ["employee_id", "first_name", "role"], // Fetching `name`
+      attributes: ["employee_id", "first_name", "role"],
     });
 
     if (!loggedInEmployee) {
       return next(new ApiError(404, "Employee not found in Employee records."));
     }
 
-    // Ensure only Admins can assign an agent to a manager
+    // Ensure only Admins can assign agents
     if (loggedInEmployee.role !== "Admin") {
       return next(new ApiError(403, "You are not authorized to perform this action."));
     }
@@ -218,52 +237,69 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
       return next(new ApiError(404, "Manager not found or invalid role."));
     }
 
-    // Validate agent
-    const agent = await Employee.findOne({
-      where: { employee_id: agent_id },
+    // Validate and process all agents
+    const agents = await Employee.findAll({
+      where: { 
+        employee_id: validAgentIds, // Use filtered valid IDs
+        role: "Sales Agent"
+      },
       attributes: ["employee_id", "first_name", "role", "manager_id"],
     });
 
-    if (!agent || agent.role !== "Sales Agent") {
-      return next(new ApiError(404, "Agent not found or invalid role."));
+    // Check if all requested agents were found and are valid
+    if (agents.length !== validAgentIds.length) {
+      const foundAgentIds = agents.map(agent => agent.employee_id);
+      const missingAgentIds = validAgentIds.filter(id => !foundAgentIds.includes(id));
+      return next(new ApiError(404, `Some agents not found or not Sales Agents: ${missingAgentIds.join(', ')}`));
     }
 
-    // Check if the agent is already assigned to this manager
-    if (agent.manager_id === manager_id) {
-      return next(new ApiError(400, "Agent is already assigned to this manager."));
+    // Check for agents already assigned to this manager
+    const alreadyAssigned = agents.filter(agent => agent.manager_id === manager_id);
+    if (alreadyAssigned.length > 0) {
+      const alreadyAssignedIds = alreadyAssigned.map(agent => agent.employee_id);
+      return next(new ApiError(400, `Agents already assigned to this manager: ${alreadyAssignedIds.join(', ')}`));
     }
 
-    // Assign the agent to the manager
-    await agent.update({ manager_id });
+    // Update all agents to be assigned to the manager
+    await Employee.update(
+      { manager_id },
+      { where: { employee_id: validAgentIds } }
+    );
 
+    // Send notification to the manager
+    const agentNames = agents.map(agent => agent.first_name).join(', ');
     await sendNotification({
       recipientUserId: manager_id,
       senderId: loggedInEmployeeId,
       entityType: "Employee",
-      entityId: agent_id,
+      entityId: validAgentIds[0],
       notificationType: "Assignment",
       title: "New Agent Assignment",
-      message: `You have been assigned a new Sales Agent: ${agent.first_name}`,
-    })
+      message: `You have been assigned new Sales Agents: ${agentNames}`,
+    });
 
-    // Success response including agent, manager, and admin names
+    // Success response with details of assigned agents
+    const assignedAgents = agents.map(agent => ({
+      agent_id: agent.employee_id,
+      agent_name: agent.first_name,
+    }));
+
     res.json(
       new ApiResponse(
         200,
         {
-          agent_id: agent.employee_id,
-          agent_name: agent.first_name,
+          assigned_agents: assignedAgents,
           manager_id: manager.employee_id,
           manager_name: manager.first_name,
           assigned_by_admin_id: loggedInEmployee.employee_id,
           assigned_by_admin_name: loggedInEmployee.first_name,
         },
-        "Sales agent assigned to the manager successfully."
+        "Sales agents assigned to the manager successfully."
       )
     );
   } catch (err) {
-    console.error("Error assigning agent:", err);
-    next(new ApiError(500, "Something went wrong while assigning the agent."));
+    console.error("Error assigning agents:", err);
+    next(new ApiError(500, "Something went wrong while assigning the agents."));
   }
 });
 
@@ -433,17 +469,17 @@ export const GetTeamDetailsByManager = asyncHandler(async (req, res, next) => {
 
     // Validate manager_id
     if (!manager_id || isNaN(manager_id)) {
-        return next(new ApiError(400, "Invalid manager ID."));
+      return next(new ApiError(400, "Invalid manager ID."));
     }
 
     // Fetch employees under the given manager
     const employees = await Employee.findAll({
-        where: { manager_id, is_active: true },
-        attributes: ["employee_id", "first_name", "last_name", "email", "phone", "profile_picture", "role"]
+      where: { manager_id, is_active: true },
+      attributes: ["employee_id", "first_name", "last_name", "email", "phone", "profile_picture", "role"]
     });
 
     if (!employees || employees.length === 0) {
-        return next(new ApiError(404, "No employees found under this manager."));
+      return next(new ApiError(404, "No employees found under this manager."));
     }
 
     // Extract employee IDs
@@ -451,36 +487,37 @@ export const GetTeamDetailsByManager = asyncHandler(async (req, res, next) => {
 
     // Fetch properties listed by those employees
     const properties = await Properties.findAll({
-        where: { assign_to: employeeIds },
-        include: [
-          {
-              model: PropertyType,
-              as: "propertyType",
-              attributes: ["property_type_id", "type_name"]
-          },
-          {
-              model: PropertyMedia,
-              as: "propertyMedia",
-              attributes: ["media_type", "file_url"]
-          },
-         ],    });
+      where: { assign_to: employeeIds },
+      include: [
+        {
+          model: PropertyType,
+          as: "propertyType",
+          attributes: ["property_type_id", "type_name"]
+        },
+        {
+          model: PropertyMedia,
+          as: "propertyMedia",
+          attributes: ["media_type", "file_url"]
+        },
+      ],
+    });
 
     // Fetch leads assigned to those employees
     const leads = await Leads.findAll({
-        where: { assigned_to_fk: employeeIds },
-        attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
+      where: { assigned_to_fk: employeeIds },
+      attributes: ["lead_id", "first_name", "last_name", "email", "phone", "budget_min", "budget_max", "status_id_fk", "assigned_to_fk"]
     });
 
     // Construct response
     return res.status(200).json(new ApiResponse(200, {
-        employees,
-        properties,
-        leads
+      employees,
+      properties,
+      leads
     }, "Employees, properties, and leads retrieved successfully."));
-} catch (error) {
+  } catch (error) {
     console.error("Error fetching employees details:", error);
     return next(new ApiError(500, "Something went wrong while fetching employee details."));
-}
+  }
 });
 
 export const GetUnassignedEmployees = asyncHandler(async (req, res, next) => {
@@ -552,3 +589,44 @@ export const GetUnassignedProperties = asyncHandler(async (req, res, next) => {
   }
 }
 );
+
+// Block Employee API
+export const toggleEmployeeStatus = asyncHandler(async (req, res) => {
+  try {
+    const { employee_id } = req.params; // Using path params
+    const { admin_id, role } = await getLoggedInUserRole(req.user?.user_id); // Assuming this function exists
+
+    if (employee_id === admin_id) {
+      return res.status(400).json(new ApiResponse(400, null, "Admins cannot block themselves"));
+    }
+    // Check if the requester is an admin
+    if (role !== "Admin") {
+      return res.status(403).json(new ApiResponse(403, null, "Only admins can modify employee status"));
+    }
+
+    // Find the employee
+    const employee = await Employee.findOne({ where: { employee_id } });
+    if (!employee) {
+      return res.status(404).json(new ApiResponse(404, null, "Employee not found"));
+    }
+
+    // Toggle logic based on current is_active status
+    if (employee.is_active) {
+      // Employee is active, so block them
+      // Check if the employee is a manager or sales agent (only for blocking)
+      if (!["Manager", "Sales Agent"].includes(employee.role)) {
+        return res.status(400).json(new ApiResponse(400, null, "Can only block managers or sales agents"));
+      }
+      await Employee.update({ is_active: false }, { where: { employee_id } });
+      return res.status(200).json(new ApiResponse(200, { employee_id }, "Employee blocked successfully"));
+    } else {
+      // Employee is inactive, so unblock them
+      await Employee.update({ is_active: true }, { where: { employee_id } });
+      return res.status(200).json(new ApiResponse(200, { employee_id }, "Employee unblocked successfully"));
+    }
+  } catch (error) {
+    console.error(`Error toggling employee status:`, error);
+    return res.status(500).json(new ApiResponse(500, null, "Internal Server Error"));
+  }
+});
+

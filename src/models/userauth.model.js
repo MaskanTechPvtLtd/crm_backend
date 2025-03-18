@@ -37,6 +37,22 @@ const UserAuth = sequelize.define(
       type: DataTypes.STRING(500), // Store refresh token securely
       allowNull: true,
     },
+    otp: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    otpExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    resetToken: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    resetTokenExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
   },
   {
     tableName: "userauth",
@@ -70,6 +86,7 @@ UserAuth.prototype.generateRefreshToken = function () {
     {
       user_id: this.user_id,
       employee_id: Employee.employee_id,
+      role: Employee.role,
     },
     process.env.REFRESH_TOKEN_SECRET,
     {

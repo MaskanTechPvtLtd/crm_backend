@@ -11,3 +11,214 @@ export const password = String(process.env.PASSWORD);
 export const database = String(process.env.DATABASE_NAME);
 export const host = String(process.env.HOST);
 export const dialect = String(process.env.DILECT);
+
+
+// emailTemplates.js
+
+// Function to generate the HTML with dynamic OTP
+export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com', heading = 'Email Verification' }) =>
+    `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Reset styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f4;
+      color: #333333;
+    }
+    a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+    /* Container */
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    /* Header */
+    .header {
+      background-color: #0066cc;
+      padding: 20px;
+      text-align: center;
+      color: #ffffff;
+    }
+    /* Content */
+    .content {
+      padding: 30px;
+      text-align: center;
+    }
+    .otp-box {
+      background-color: #f8f9fa;
+      display: inline-block;
+      padding: 15px 25px;
+      border-radius: 5px;
+      margin: 20px 0;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 5px;
+      color: #0066cc;
+    }
+    /* Footer */
+    .footer {
+      background-color: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #666666;
+    }
+    /* Responsive */
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+      }
+      .content {
+        padding: 20px;
+      }
+      .otp-box {
+        font-size: 20px;
+        padding: 10px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4; padding: 20px;">
+    <tr>
+      <td align="center">
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 24px;">${heading}</h1>
+          </div>
+          <div class="content">
+            <h2 style="margin-top: 0; font-size: 20px;">Verify Your Email Address</h2>
+            <p style="line-height: 1.6;">Thank you for registering with ${companyName}! Please use the OTP below to verify your email address:</p>
+            <div class="otp-box">${otp}</div>
+            <p style="line-height: 1.6;">This OTP will expire in <strong>15 minutes</strong>.</p>
+            <p style="line-height: 1.6;">If you didn't request this, please ignore this email or contact our support team.</p>
+          </div>
+          <div class="footer">
+            <p style="margin: 0;">© ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+            <p style="margin: 5px 0 0;">
+              <a href="mailto:${supportEmail}">Contact Support</a> | 
+              <a href="${website}/privacy">Privacy Policy</a>
+            </p>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+export const getForgotPasswordTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com', email }) => `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      /* Reset styles */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Arial', sans-serif;
+        background-color: #f4f4f4;
+        color: #333333;
+      }
+      a {
+        color: #0066cc;
+        text-decoration: none;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      }
+      .header {
+        background-color: #0066cc;
+        padding: 20px;
+        text-align: center;
+        color: #ffffff;
+      }
+      .content {
+        padding: 30px;
+        text-align: center;
+      }
+      .otp-box {
+        background-color: #f8f9fa;
+        display: inline-block;
+        padding: 15px 25px;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 5px;
+        color: #0066cc;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        padding: 20px;
+        text-align: center;
+        font-size: 12px;
+        color: #666666;
+      }
+      @media only screen and (max-width: 600px) {
+        .container {
+          width: 100%;
+          margin: 0;
+          border-radius: 0;
+        }
+        .content {
+          padding: 20px;
+        }
+        .otp-box {
+          font-size: 20px;
+          padding: 10px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <table cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4; padding: 20px;">
+      <tr>
+        <td align="center">
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 24px;">Password Reset</h1>
+            </div>
+            <div class="content">
+              <h2 style="margin-top: 0; font-size: 20px;">Reset Your Password</h2>
+              <p style="line-height: 1.6;">We received a request to reset your password for your ${email} account. Use the OTP below to proceed:</p>
+              <div class="otp-box">${otp}</div>
+              <p style="line-height: 1.6;">This OTP will expire in <strong>15 minutes</strong>.</p>
+              <p style="line-height: 1.6;">If you didn’t request a password reset, please ignore this email or contact our support team at <a href="mailto:${supportEmail}">${supportEmail}</a>.</p>
+            </div>
+            <div class="footer">
+              <p style="margin: 0;">© ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+              <p style="margin: 5px 0 0;">
+                <a href="mailto:${supportEmail}">Contact Support</a> | 
+                <a href="${website}/privacy">Privacy Policy</a>
+              </p>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+`;

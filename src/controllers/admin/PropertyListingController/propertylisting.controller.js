@@ -297,94 +297,222 @@ export const DeleteProperty = asyncHandler(async (req, res, next) => {
 });
 
 //assign property to agent by admin(only admin can assign)
+// export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
+//     const { agent_id, property_id } = req.body;
+
+//     // Validate input
+//     if (!property_id || !agent_id) {
+//         return next(new ApiError(400, "Missing required fields (property_id, agent_id)."));
+//     }
+
+//     // Find the property
+//     const property = await Properties.findByPk(property_id, {
+//         attributes: ["property_id", "title", "assign_to"], // Include title
+//     });
+
+//     if (!property) {
+//         return next(new ApiError(404, "Property not found."));
+//     }
+
+//     // 🔹 Check if the property is already assigned
+//     if (property.assign_to) {
+//         return next(new ApiError(400 , `Property ${property.title} is already assigned to agent ID ${property.assign_to}.`));
+//     }
+
+//     // Get the logged-in user's ID from the JWT middleware
+//     const loggedInUserId = req.user.user_id; // Ensure `req.user` contains `user_id`
+
+//     // Step 1: Retrieve the `employee_id` from `user_id`
+//     const userRecord = await UserAuth.findOne({
+//         where: { user_id: loggedInUserId },
+//         attributes: ["employee_id"], // Fetch `employee_id`
+//     });
+
+//     if (!userRecord || !userRecord.employee_id) {
+//         return next(new ApiError(404, "Employee record not found for this user."));
+//     }
+
+//     const loggedInEmployeeId = userRecord.employee_id;
+
+//     // Step 2: Find the logged-in employee (Admin)
+//     const loggedInEmployee = await Employee.findOne({
+//         where: { employee_id: loggedInEmployeeId },
+//         attributes: ["employee_id", "first_name", "role"],
+//     });
+
+//     if (!loggedInEmployee) {
+//         return next(new ApiError(404, "Employee not found in records."));
+//     }
+
+//     // Ensure only Admins can assign an agent to a property
+//     if (loggedInEmployee.role !== "Admin") {
+//         return next(new ApiError(403, "You are not authorized to assign properties."));
+//     }
+//     const adminId = loggedInEmployee.employee_id;
+
+//     // Step 3: Find the Agent’s Name
+//     const agent = await Employee.findOne({
+//         where: { employee_id: agent_id },
+//         attributes: ["employee_id", "first_name", "last_name"],
+//     });
+
+//     if (!agent) {
+//         return next(new ApiError(404, "Agent not found."));
+//     }
+
+//     // Step 4: Assign the property to the agent
+//     property.assign_to = agent_id;
+//     await property.save();
+
+//     await sendNotification({
+//         recipientUserId: agent_id,
+//         senderId: adminId,
+//         entityType: "Property",
+//         entityId: property_id,
+//         notificationType: "Assignment",
+//         title: "New Property Assignment",
+//         message: "You have been assigned a new property. Please review the details.",
+//     });
+
+
+//     // Step 5: Return agent name & property title
+//     res.status(200).json(
+//         new ApiResponse(200, {
+//             property_id: property.property_id,
+//             property_title: property.title,
+//             assigned_to: {
+//                 agent_id: agent.employee_id,
+//                 agent_name: `${agent.first_name} ${agent.last_name}`,
+//             },
+//         }, "Property assigned to agent successfully.")
+//     );
+// });
+
 export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
-    const { agent_id, property_id } = req.body;
-
-    // Validate input
-    if (!property_id || !agent_id) {
-        return next(new ApiError(400, "Missing required fields (property_id, agent_id)."));
-    }
-
-    // Find the property
-    const property = await Properties.findByPk(property_id, {
-        attributes: ["property_id", "title", "assign_to"], // Include title
-    });
-
-    if (!property) {
-        return next(new ApiError(404, "Property not found."));
-    }
-
-    // 🔹 Check if the property is already assigned
-    if (property.assign_to) {
-        return next(new ApiError(400 , `Property ${property.title} is already assigned to agent ID ${property.assign_to}.`));
-    }
-
-    // Get the logged-in user's ID from the JWT middleware
-    const loggedInUserId = req.user.user_id; // Ensure `req.user` contains `user_id`
-
-    // Step 1: Retrieve the `employee_id` from `user_id`
-    const userRecord = await UserAuth.findOne({
+    try {
+      console.log("Incoming request body:", req.body); // Debug log
+      const { agent_id, property_ids } = req.body;
+  
+      // Validate input
+      if (!Array.isArray(property_ids) || property_ids.length === 0) {
+        return next(new ApiError(400, "property_ids must be a non-empty array"));
+      }
+      if (!agent_id) {
+        return next(new ApiError(400, "agent_id is required"));
+      }
+  
+      // Ensure all property_ids are valid (not undefined, null, or non-numeric)
+      const validPropertyIds = property_ids.filter(id => id !== undefined && id !== null && !isNaN(id));
+      if (validPropertyIds.length !== property_ids.length) {
+        const invalidIds = property_ids.filter(id => !validPropertyIds.includes(id));
+        return next(new ApiError(400, `Invalid property_ids provided: ${invalidIds.join(', ')}`));
+      }
+  
+      // Find all properties
+      const properties = await Properties.findAll({
+        where: { property_id: validPropertyIds },
+        attributes: ["property_id", "title", "assign_to"],
+      });
+  
+      // Check if all requested properties were found
+      if (properties.length !== validPropertyIds.length) {
+        const foundPropertyIds = properties.map(prop => prop.property_id);
+        const missingPropertyIds = validPropertyIds.filter(id => !foundPropertyIds.includes(id));
+        return next(new ApiError(404, `Some properties not found: ${missingPropertyIds.join(', ')}`));
+      }
+  
+      // Check if any properties are already assigned
+      const alreadyAssigned = properties.filter(prop => prop.assign_to);
+      if (alreadyAssigned.length > 0) {
+        const alreadyAssignedDetails = alreadyAssigned.map(prop => 
+          `${prop.title} (ID: ${prop.property_id}) to agent ID ${prop.assign_to}`
+        );
+        return next(new ApiError(400, `Some properties are already assigned: ${alreadyAssignedDetails.join(', ')}`));
+      }
+  
+      // Get the logged-in user's ID from the JWT middleware
+      const loggedInUserId = req.user.user_id;
+      if (!loggedInUserId) {
+        return next(new ApiError(401, "User not authenticated"));
+      }
+  
+      // Step 1: Retrieve the `employee_id` from `user_id`
+      const userRecord = await UserAuth.findOne({
         where: { user_id: loggedInUserId },
-        attributes: ["employee_id"], // Fetch `employee_id`
-    });
-
-    if (!userRecord || !userRecord.employee_id) {
+        attributes: ["employee_id"],
+      });
+  
+      if (!userRecord || !userRecord.employee_id) {
         return next(new ApiError(404, "Employee record not found for this user."));
-    }
-
-    const loggedInEmployeeId = userRecord.employee_id;
-
-    // Step 2: Find the logged-in employee (Admin)
-    const loggedInEmployee = await Employee.findOne({
+      }
+  
+      const loggedInEmployeeId = userRecord.employee_id;
+  
+      // Step 2: Find the logged-in employee (Admin)
+      const loggedInEmployee = await Employee.findOne({
         where: { employee_id: loggedInEmployeeId },
         attributes: ["employee_id", "first_name", "role"],
-    });
-
-    if (!loggedInEmployee) {
+      });
+  
+      if (!loggedInEmployee) {
         return next(new ApiError(404, "Employee not found in records."));
-    }
-
-    // Ensure only Admins can assign an agent to a property
-    if (loggedInEmployee.role !== "Admin") {
+      }
+  
+      // Ensure only Admins can assign properties
+      if (loggedInEmployee.role !== "Admin") {
         return next(new ApiError(403, "You are not authorized to assign properties."));
-    }
-    const adminId = loggedInEmployee.employee_id;
-
-    // Step 3: Find the Agent’s Name
-    const agent = await Employee.findOne({
+      }
+      const adminId = loggedInEmployee.employee_id;
+  
+      // Step 3: Find the Agent
+      const agent = await Employee.findOne({
         where: { employee_id: agent_id },
         attributes: ["employee_id", "first_name", "last_name"],
-    });
-
-    if (!agent) {
+      });
+  
+      if (!agent) {
         return next(new ApiError(404, "Agent not found."));
-    }
-
-    // Step 4: Assign the property to the agent
-    property.assign_to = agent_id;
-    await property.save();
-
-    await sendNotification({
+      }
+  
+      // Step 4: Assign all properties to the agent
+      await Properties.update(
+        { assign_to: agent_id },
+        { where: { property_id: validPropertyIds } }
+      );
+  
+      // Step 5: Send notification to the agent
+      const propertyTitles = properties.map(prop => prop.title).join(', ');
+      await sendNotification({
         recipientUserId: agent_id,
         senderId: adminId,
         entityType: "Property",
-        entityId: property_id,
+        entityId: validPropertyIds[0], // Use first property ID
         notificationType: "Assignment",
         title: "New Property Assignment",
-        message: "You have been assigned a new property. Please review the details.",
-    });
-
-
-    // Step 5: Return agent name & property title
-    res.status(200).json(
-        new ApiResponse(200, {
-            property_id: property.property_id,
-            property_title: property.title,
+        message: `You have been assigned new properties: ${propertyTitles}`,
+      });
+  
+      // Step 6: Prepare response
+      const assignedProperties = properties.map(prop => ({
+        property_id: prop.property_id,
+        property_title: prop.title,
+      }));
+  
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            assigned_properties: assignedProperties,
             assigned_to: {
-                agent_id: agent.employee_id,
-                agent_name: `${agent.first_name} ${agent.last_name}`,
+              agent_id: agent.employee_id,
+              agent_name: `${agent.first_name} ${agent.last_name}`,
             },
-        }, "Property assigned to agent successfully.")
-    );
-});
-
+          },
+          "Properties assigned to agent successfully."
+        )
+      );
+    } catch (err) {
+      console.error("Error assigning properties:", err);
+      next(new ApiError(500, "Something went wrong while assigning the properties."));
+    }
+  });

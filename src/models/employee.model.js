@@ -59,6 +59,10 @@ const Employee = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
   },
   {
     tableName: "employee",
