@@ -294,3 +294,125 @@ export const DeleteLead = asyncHandler(async (req, res, next) => {
     next(new ApiError(500, "Something went wrong while deleting the lead."));
   }
 });
+
+export const AssignLeadsToAgent = asyncHandler(async (req, res, next) => {
+  try {
+    const { lead_ids, employee_id } = req.body;
+
+    // Validate required fields
+    if (!Array.isArray(lead_ids) || lead_ids.length === 0) {
+      return next(new ApiError(400, "lead_ids must be a non-empty array"));
+    }
+    if (!employee_id) {
+      return next(new ApiError(400, "employee_id is required"));
+    }
+
+    // Ensure all lead_ids are valid (not undefined, null, or non-numeric)
+    const validLeadIds = lead_ids.filter(id => id !== undefined && id !== null && !isNaN(id));
+    if (validLeadIds.length !== lead_ids.length) {
+      const invalidIds = lead_ids.filter(id => !validLeadIds.includes(id));
+      return next(new ApiError(400, `Invalid lead_ids provided: ${invalidIds.join(', ')}`));
+    }
+
+    // Ensure `req.user` exists and contains `user_id`
+    if (!req.user || !req.user.user_id) {
+      return next(new ApiError(401, "Unauthorized: User authentication required."));
+    }
+
+    const loggedInUserId = req.user.user_id;
+
+    // Step 1: Retrieve the `employee_id` from `user_id`
+    const userRecord = await UserAuth.findOne({
+      where: { user_id: loggedInUserId },
+      attributes: ["employee_id"],
+    });
+
+    if (!userRecord || !userRecord.employee_id) {
+      return next(new ApiError(404, "Employee record not found for this user."));
+    }
+
+    const loggedInEmployeeId = userRecord.employee_id;
+
+    // Step 2: Find the logged-in employee (Admin)
+    const loggedInEmployee = await Employee.findOne({
+      where: { employee_id: loggedInEmployeeId },
+      attributes: ["employee_id", "first_name", "role"],
+    });
+
+    if (!loggedInEmployee) {
+      return next(new ApiError(404, "Employee not found in records."));
+    }
+
+    // Ensure only Admins can assign leads
+    if (loggedInEmployee.role.toLowerCase() !== "admin") {
+      return next(new ApiError(403, "Forbidden: You are not authorized to assign leads."));
+    }
+    const adminId = loggedInEmployee.employee_id;
+
+    // Step 3: Check if all leads exist
+    const leads = await Lead.findAll({
+      where: { lead_id: validLeadIds },
+    });
+
+    if (leads.length !== validLeadIds.length) {
+      const foundLeadIds = leads.map(lead => lead.lead_id);
+      const missingLeadIds = validLeadIds.filter(id => !foundLeadIds.includes(id));
+      return next(new ApiError(404, `Some leads not found: ${missingLeadIds.join(', ')}`));
+    }
+
+    // Step 4: Check if the employee (agent) exists
+    const agent = await Employee.findByPk(employee_id, {
+      attributes: ["employee_id", "first_name", "last_name"],
+    });
+    if (!agent) {
+      return next(new ApiError(404, "Agent not found."));
+    }
+
+    // Step 5: Assign all leads to the agent
+    await Lead.update(
+      { assigned_to_fk: employee_id },
+      { where: { lead_id: validLeadIds } }
+    );
+
+    // Step 6: Send notification to the agent
+    const leadDetails = leads.map(lead => lead.first_name).join(', '); // You can customize this based on available lead fields
+    await sendNotification({
+      recipientUserId: employee_id,
+      senderId: adminId,
+      entityType: "Lead",
+      entityId: validLeadIds[0], // Use the first lead ID as a representative
+      notificationType: "Assignment",
+      title: "New Lead Assignment",
+      message: `You have been assigned new leads Name: ${leadDetails}`,
+    });
+
+    // Step 7: Prepare response with assigned leads
+    const assignedLeads = leads.map(lead => ({
+      lead_id: lead.lead_id,
+      // Add more lead details if available, e.g., lead.name or lead.title
+    }));
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          assigned_leads: assignedLeads,
+          assigned_to: {
+            employee_id: agent.employee_id,
+            agent_name: `${agent.first_name} ${agent.last_name}`,
+          },
+        },
+        "Leads successfully assigned to the agent."
+      )
+    );
+  } catch (error) {
+    console.error("Error assigning leads:", error);
+
+    // Handle Sequelize validation errors
+    if (error.name === "SequelizeDatabaseError") {
+      return next(new ApiError(400, "Invalid data provided."));
+    }
+
+    next(new ApiError(500, "Something went wrong while assigning the leads."));
+  }
+});
