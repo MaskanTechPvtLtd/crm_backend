@@ -15,7 +15,8 @@ import {
     GetUnassignedEmployees,
     GetUnassignedProperties,
     GetUnassignedLeads,
-    toggleEmployeeStatus
+    toggleEmployeeStatus,
+    GetInactiveEmployees
 } from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
 
 const router = express.Router();
@@ -35,4 +36,5 @@ router.get("/get-unassign-employees", verifyJWT, GetUnassignedEmployees);
 router.get("/get-unassign-leads", verifyJWT, GetUnassignedLeads);
 router.get("/get-unassign-properties", verifyJWT, GetUnassignedProperties);
 router.patch("/block-unblockEmployee/:employee_id", verifyJWT, toggleEmployeeStatus);
+router.get("/getAllblockemployee", verifyJWT, GetInactiveEmployees);
 export default router; 

@@ -630,3 +630,16 @@ export const toggleEmployeeStatus = asyncHandler(async (req, res) => {
   }
 });
 
+export const GetInactiveEmployees = asyncHandler(async (req, res) => {
+  try {
+    const employees = await Employee.findAll({
+      where: { is_active: false },
+      attributes: ["employee_id", "first_name", "last_name", "email", "phone", "role", "is_active"],
+    });
+
+    res.json(new ApiResponse(200, employees, "Inactive employee records retrieved successfully."));
+  } catch (err) {
+    console.error("Error fetching inactive employees:", err);
+    next(new ApiError(500, "Something went wrong while fetching inactive employees."));
+  }
+});
