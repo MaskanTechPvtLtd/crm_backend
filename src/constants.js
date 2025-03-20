@@ -16,7 +16,7 @@ export const dialect = String(process.env.DILECT);
 // emailTemplates.js
 
 // Function to generate the HTML with dynamic OTP
-export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com', heading = 'Email Verification' }) =>
+export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com',}) =>
     `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,7 +98,7 @@ export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company 
       <td align="center">
         <div class="container">
           <div class="header">
-            <h1 style="margin: 0; font-size: 24px;">${heading}</h1>
+            <h1 style="margin: 0; font-size: 24px;">Email Verification</h1>
           </div>
           <div class="content">
             <h2 style="margin-top: 0; font-size: 20px;">Verify Your Email Address</h2>

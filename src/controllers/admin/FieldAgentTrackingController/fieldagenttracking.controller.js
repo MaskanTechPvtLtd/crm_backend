@@ -35,7 +35,7 @@ export const getAllEmployeeLocations = asyncHandler(async (req, res, next) => {
     try {
         const employees = await Employee.findAll({
             where: {
-                role: { [Op.ne]: "Admin" }, // Exclude employees with role "Admin"
+                role: { [Op.notIn]: ["Admin", "Manager"] }, // Exclude employees with role "Admin" and "Manager"
             },
             include: [
                 {

@@ -6,36 +6,35 @@ import UserAuth from "../models/userauth.model.js";
 
 // Authentication middleware for verifying the user JWT token
 export const verifyJWT = asyncHandler(async (req, res, next) => {
-  // let token = await req?.header("Authorization")?.replace("Bearer ", "");
   try {
-    // 1. Try to get the token from cookies or Authorization header
-    const tokenBearer =
-      req?.cookies?.accessToken ||
-      req?.header("Authorization")?.replace("Bearer ", "");
-      // console.log("this is the access token : ", token);
+    // 1. Get the token from cookies or Authorization header
+    const tokenFromCookies = req?.cookies?.accessToken;
+    const authHeader = req?.header("Authorization");
 
-    const token = tokenBearer.replace("Bearer ", "");
+    // Extract token: prioritize cookies, then header
+    let token = tokenFromCookies;
+    if (!token && authHeader?.startsWith("Bearer ")) {
+      token = authHeader.replace("Bearer ", "");
+    }
 
-    // If token is not found, send an error response
+    // If no token is found, throw an error
     if (!token) {
       throw new ApiError(401, "Unauthorized request: No token provided");
     }
+
     // 2. Decode and verify the token
     const decodedToken = jwt.verify(token, ACCESS_TOKEN_SECRET);
 
-    // console.log("this is the decoded : ", decodedToken);
-    // console.log("this is the decoded user id : ", decodedToken?.user_id);
-    // Ensure the decoded token has the required 'id' field (for user verification)
+    // Ensure the decoded token has the required 'user_id' field
     if (!decodedToken?.user_id) {
       throw new ApiError(401, "Unauthorized request: Invalid token structure");
     }
+
     // 3. Find the user using the decoded token ID
     const user = await UserAuth.findOne({ where: { user_id: decodedToken.user_id } });
 
-    if (!user) throw new ApiError(401, "User not found.");
-    // If the user is not found, throw an error
     if (!user) {
-      throw new ApiError(401, "Invalid access token: user not found");
+      throw new ApiError(401, "Invalid access token: User not found");
     }
 
     // 4. Attach the user data to the request object
@@ -48,4 +47,3 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, err?.message || "Invalid access token");
   }
 });
-

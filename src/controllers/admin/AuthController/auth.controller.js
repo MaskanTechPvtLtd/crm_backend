@@ -118,8 +118,12 @@ export const register = asyncHandler(async (req, res) => {
   // Prepare email content
   const subject = 'Email Verification OTP';
   const text = `Your OTP for email verification is: ${otp}. It will expire in 15 minutes.`;
-  const html = getVerificationEmailTemplate(otp); // Get HTML with OTP inserted
-
+  const html = getVerificationEmailTemplate({
+    otp,
+    companyName: 'Your Company Name',
+    supportEmail: 'support@yourcompany.com',
+    website: 'https://yourcompany.com',
+  });
   try {
     // Use your sendEmail function
     await sendEmail(email, subject, text, html);
@@ -207,6 +211,7 @@ export const resendOTP = asyncHandler(async (req, res) => {
 
   // Generate new OTP
   const otp = generateOTP();
+  console.log("Generated OTP:", otp); // Should log a 6-digit string, e.g., "543210"
   const otpExpiry = Date.now() + 15 * 60 * 1000;
 
   // Update user with new OTP
@@ -218,8 +223,12 @@ export const resendOTP = asyncHandler(async (req, res) => {
   // Send email
   const subject = 'New Email Verification OTP';
   const text = `Your new OTP for email verification is: ${otp}. It will expire in 15 minutes.`;
-  const html = getVerificationEmailTemplate(otp); // Get HTML with OTP inserted
-
+  const html = getVerificationEmailTemplate({
+    otp,
+    companyName: 'Your Company Name',
+    supportEmail: 'support@yourcompany.com',
+    website: 'https://yourcompany.com',
+  });
 
   await sendEmail(user.Employee.email, subject, text, html);
 

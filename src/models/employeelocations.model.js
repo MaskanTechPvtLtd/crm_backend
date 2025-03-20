@@ -32,10 +32,6 @@ const EmployeeLocation = sequelize.define(
       allowNull: false,
       defaultValue: DataTypes.NOW,
     },
-    device_info: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
   },
   {
     tableName: "employeelocations",
