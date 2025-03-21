@@ -7,6 +7,7 @@ import Interaction from "../../../models/interactions.model.js";
 import Properties from "../../../models/properties.model.js";
 import Task from "../../../models/task.model.js";
 import LeadStatus from "../../../models/leadstatus.model.js";
+import CustomerFeedback from "../../../models/customerfeedback.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
@@ -162,3 +163,31 @@ export const getAdminDailyDetailedReport = asyncHandler(async (req, res, next) =
         next(new ApiError(500, "Something went wrong while fetching Dashbord Details."));
     }
 });
+
+export const GetDashbordCounts = asyncHandler(async (req, res, next) => {
+    try {
+        const totalLeads = await Lead.count();
+        const totalProperties = await Properties.count();
+        const totalTasks = await Task.count();
+        const totalEmployees = await Employee.count();
+        const totalInteractions = await Interaction.count();
+        const totalfeedbacks = await CustomerFeedback.count();
+        const salesAgent = await Employee.count({ where: { role: 'Sales Agent' } });
+
+        res.status(200).json(
+            new ApiResponse(200, {
+                totalLeads,
+                totalProperties,
+                totalTasks,
+                totalEmployees,
+                totalInteractions,
+                totalfeedbacks,
+                salesAgent
+            })
+        );
+    } catch (err) {
+        console.error("Error fetching daily detailed report:", err);
+        next(new ApiError(500, "Something went wrong while fetching Dashbord Counts."));
+    }
+}
+);
