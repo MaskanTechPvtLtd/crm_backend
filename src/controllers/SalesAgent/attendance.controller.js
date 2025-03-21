@@ -142,3 +142,23 @@ const markAbsenteesWithLeaveCheck = async () => {
 
     console.log(`Marked employees as Absent/On Leave`);
 };
+
+
+export const CheckAttendanceStatus = asyncHandler(async (req, res, next) => {
+    const { employee_id } = req.body;
+
+    if (!employee_id) {
+        return next(new ApiError(400, "Employee ID is required"));
+    }
+
+    const today = dayjs().format("YYYY-MM-DD");
+    const attendance = await Attendance.findOne({
+        where: { employee_id, attendance_date: today },
+    });
+
+    if (!attendance) {
+        return next(new ApiError(404, "No attendance record found for today"));
+    }
+
+    return res.status(200).json(new ApiResponse(200, attendance, "Attendance status retrieved successfully"));
+});

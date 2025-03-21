@@ -52,6 +52,9 @@ app.post('/report-violation', express.json(), (req, res) => {
 app.use(helmetMiddleware);
 // app.use(errorHandler);
 // Admin routes
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Server is running in production 🚀" });
+});
 app.use("/api/v1", adminRoutes);
 app.use("/api/v1/manageEmployee", manageEmployeeRoutes);
 app.use("/api/v1/property", propertyListingRoutes);
