@@ -145,20 +145,50 @@ const markAbsenteesWithLeaveCheck = async () => {
 
 
 export const CheckAttendanceStatus = asyncHandler(async (req, res, next) => {
-    const { employee_id } = req.body;
+    const { employee_id } = req.params;
 
-    if (!employee_id) {
-        return next(new ApiError(400, "Employee ID is required"));
+    // Validate employee_id
+    if (!employee_id || !Number.isInteger(Number(employee_id))) {
+        return next(new ApiError(400, "Valid Employee ID is required"));
     }
 
+    // Get today's date
     const today = dayjs().format("YYYY-MM-DD");
+
+    // Fetch today's attendance record
     const attendance = await Attendance.findOne({
-        where: { employee_id, attendance_date: today },
+        where: { employee_id: Number(employee_id), attendance_date: today },
     });
 
+    // If no attendance record found
     if (!attendance) {
-        return next(new ApiError(404, "No attendance record found for today"));
+        return res.status(200).json(
+            new ApiResponse(200, {
+                employee_id: Number(employee_id),
+                attendance_date: today,
+                check_in: null,
+                check_out: null,
+                status: "Not Logged In",
+            }, "No attendance record found for today")
+        );
     }
 
-    return res.status(200).json(new ApiResponse(200, attendance, "Attendance status retrieved successfully"));
+    // Determine attendance status
+    let status = "Not Logged In";
+    if (attendance.check_in && !attendance.check_out) {
+        status = "Logged In";
+    } else if (attendance.check_in && attendance.check_out) {
+        status = "Logged Out";
+    }
+
+    // Response with structured data
+    return res.status(200).json(
+        new ApiResponse(200, {
+            employee_id: attendance.employee_id,
+            attendance_date: attendance.attendance_date,
+            check_in: attendance.check_in,
+            check_out: attendance.check_out,
+            status, // Status field
+        }, "Attendance status retrieved successfully")
+    );
 });
