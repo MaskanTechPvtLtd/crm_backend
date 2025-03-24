@@ -23,8 +23,10 @@ export const GetAllEmployees = asyncHandler(async (req, res, next) => {
     // Extract `role` query parameter (optional)
     const { role } = req.query;
 
-    // Define filter object
-    const whereCondition = role ? { role } : {}; // If `role` exists, filter by it
+    // Define filter object to exclude Admin
+    const whereCondition = {
+      role: role ? role : { [Op.ne]: "Admin" }, // Exclude "Admin" if no role filter is provided
+    };
 
     // Fetch employees based on filter
     const employees = await Employee.findAll({ where: whereCondition });

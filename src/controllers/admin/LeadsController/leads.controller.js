@@ -68,6 +68,69 @@ export const AddNewLead = asyncHandler(async (req, res, next) => {
   }
 });
 
+export const EditLead = asyncHandler(async (req, res, next) => {
+  try {
+    const { lead_id } = req.params; // Extract lead ID from request parameters
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      source_id_fk,
+      status_id_fk,
+      budget_min,
+      budget_max,
+      preferred_type_id_fk,
+    } = req.body;
+
+    // Check if the lead exists
+    const lead = await Lead.findByPk(lead_id);
+    if (!lead) {
+      return next(new ApiError(404, "Lead not found."));
+    }
+
+    // Check if the email or phone already exists for another lead
+    const existingLead = await Lead.findOne({
+      where: {
+        [Op.or]: [{ email }, { phone }],
+        lead_id: { [Op.ne]: lead_id }, // Ensure it's not the same lead
+      },
+    });
+
+    if (existingLead) {
+      return next(new ApiError(400, "Another lead with this email or phone already exists."));
+    }
+
+    // Update the lead
+    await lead.update({
+      first_name,
+      last_name,
+      email,
+      phone,
+      source_id_fk,
+      status_id_fk,
+      budget_min,
+      budget_max,
+      preferred_type_id_fk,
+    });
+
+    // Fetch updated lead details
+    const updatedLead = await Lead.findByPk(lead_id, {
+      include: [
+        { model: PropertyType, attributes: ["property_type_id", "type_name"] },
+        { model: LeadSource, attributes: ["source_id", "source_name"] },
+        { model: LeadStatus, attributes: ["status_id", "status_name"] },
+      ],
+    });
+
+    res.status(200).json(new ApiResponse(200, updatedLead, "Lead updated successfully."));
+  } catch (error) {
+    console.error("Error updating lead:", error);
+    next(new ApiError(500, "Something went wrong while updating the lead."));
+  }
+});
+
+
 export const GetLeadById = asyncHandler(async (req, res, next) => {
   try {
     const { lead_id } = req.params;
@@ -113,6 +176,7 @@ export const GetAllLeads = asyncHandler(async (req, res, next) => {
         { model: LeadSource, attributes: ["source_id", "source_name"] },
         { model: LeadStatus, attributes: ["status_id", "status_name"] },
       ],
+      order: [["created_at", "DESC"]], // Order by newest leads first
     });
 
     // Handle case when no leads are found
