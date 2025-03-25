@@ -490,3 +490,36 @@ export const resetPassword = asyncHandler(async (req, res) => {
       )
     );
 });
+
+// 4. Change Password
+export const changePassword = asyncHandler(async (req, res) => {
+  const { employee_id, oldPassword, newPassword } = req.body;
+
+  if (!validatePassword(newPassword)) throw new ApiError(400, "Weak password");
+
+  const user = await UserAuth.findOne({ where: { employee_id } });
+  if (!user) throw new ApiError(404, "User not found");
+
+  // Check old password
+  const isPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
+  if (!isPasswordValid) throw new ApiError(401, "Invalid old password");
+
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // Update password
+  await UserAuth.update(
+    { password_hash: hashedPassword },
+    { where: { employee_id } }
+  );
+
+  return res
+    .status(200)
+    .json(
+      createResponse(
+        200,
+        { employee_id },
+        "Password changed successfully"
+      )
+    );
+});
