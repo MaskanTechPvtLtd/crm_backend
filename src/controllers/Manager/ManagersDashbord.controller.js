@@ -7,6 +7,7 @@ import Interaction from "../../models/interactions.model.js";
 import Properties from "../../models/properties.model.js";
 import Task from "../../models/task.model.js";
 import LeadStatus from "../../models/leadstatus.model.js";
+import Customerfeedback from "../../models/customerfeedback.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
 import { ApiError } from "../../utils/ApiError.utils.js";
@@ -62,7 +63,7 @@ export const GetManagerDailyDetailedReport = asyncHandler(async (req, res, next)
             group: ["Properties.status_id", "status.status_id", "status.status_name"],
             include: [{ model: Status, as: "status", attributes: ["status_name"] }],
         });
-        
+
         const propertyStatusData = propertyStatuses.map(s => ({ status: s.status.status_name, count: s.get("count") }));
 
         /** 📊 4. Pie Chart Data - Tasks by Status */
@@ -119,4 +120,53 @@ export const GetManagerDailyDetailedReport = asyncHandler(async (req, res, next)
         next(new ApiError(500, "Something went wrong while fetching the report."));
     }
 });
+
+
+export const GetManagerDashbordCounts = asyncHandler(async (req, res, next) => {
+    try {
+        const { manager_id } = req.params; // Extract manager_id from path parameters
+
+        // Fetch manager details
+        const manager = await Employee.findOne({
+            where: { employee_id: manager_id, role: "Manager" }, // Ensure the user is a Manager
+            attributes: ["employee_id", "first_name", "last_name"],
+        });
+
+        if (!manager) {
+            return next(new ApiError(404, "Manager not found"));
+        }
+
+        // Get all employees under the manager (including manager)
+        const teamIds = [manager_id]; // Start with manager ID
+
+        // Fetch all sales agents under this manager
+        const salesAgents = await Employee.findAll({
+            where: { manager_id: manager_id, role: "Sales Agent" },
+            attributes: ["employee_id"],
+        });
+
+        // Add sales agent IDs to the list
+        salesAgents.forEach(agent => teamIds.push(agent.employee_id));
+
+        // Get total leads & properties assigned to the manager and sales agents
+        const totalLeads = await Lead.count({ where: { assigned_to_fk: { [Op.in]: teamIds } } });
+        const totalProperties = await Properties.count({ where: { assign_to: { [Op.in]: teamIds } } });
+        const totalFeedbacks = await Customerfeedback.count({ where: { agent_id: { [
+            Op.in]: teamIds } } });
+
+        // 🏷️ Response
+        const response = {
+            total_sales_agents: salesAgents.length,
+            total_leads: totalLeads,
+            total_properties: totalProperties,
+            total_feedbacks: totalFeedbacks,
+        };
+
+        res.status(200).json(new ApiResponse(200, response, "Manager dashboard counts fetched successfully."));
+    } catch (error) {
+        console.error("Error fetching counts:", error);
+        next(new ApiError(500, "Something went wrong while fetching counts."));
+    }
+});
+
 

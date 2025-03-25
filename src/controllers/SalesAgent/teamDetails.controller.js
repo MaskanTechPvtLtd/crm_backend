@@ -3,6 +3,7 @@ import Properties from "../../models/properties.model.js";
 import PropertyMedia from "../../models/propertymedia.model.js";
 import PropertyType from "../../models/propertytypes.model.js";
 import Leads from "../../models/leads.model.js";
+import CustomerFeedback from "../../models/customerfeedback.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
@@ -31,9 +32,9 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
 
         // Fetch the agent and their manager ID
         const agent = await Employee.findOne({
-            where: { 
-                employee_id: agentIdNum, 
-                is_active: true 
+            where: {
+                employee_id: agentIdNum,
+                is_active: true
             },
             attributes: ["employee_id", "manager_id"]
         }).catch(error => {
@@ -51,9 +52,9 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
 
         // Fetch employees under the agent's manager
         const employees = await Employee.findAll({
-            where: { 
-                manager_id: agent.manager_id, 
-                is_active: true 
+            where: {
+                manager_id: agent.manager_id,
+                is_active: true
             },
             attributes: ["employee_id", "first_name", "last_name", "email", "phone", "role"]
         }).catch(error => {
@@ -113,5 +114,46 @@ export const GetTeamDetailsofAgent = asyncHandler(async (req, res, next) => {
         }
         console.error("Error fetching team details:", error);
         return next(new ApiError(500, "Something went wrong while fetching employee details."));
+    }
+});
+
+export const GetAgentsDashbordCounts = asyncHandler(async (req, res, next) => {
+    try {
+        const { agent_id } = req.params; // Extract agent_id from path parameters
+
+        // Validate if the agent exists
+        const agent = await Employee.findOne({
+            where: { employee_id: agent_id, role: "Sales Agent" }, // Ensure it's a valid agent
+            attributes: ["employee_id", "first_name", "last_name", "manager_id"],
+        });
+
+        if (!agent) {
+            return next(new ApiError(404, "Agent not found"));
+        }
+
+        // Fetch count of team members (other sales agents under the same manager)
+        const teamMembersCount = await Employee.count({
+            where: { manager_id: agent.manager_id, role: "Sales Agent", employee_id: { [Op.ne]: agent_id } },
+        });
+
+        // Fetch counts for leads, properties, and feedbacks assigned to this agent
+        const [totalLeads, totalProperties, totalFeedbacks] = await Promise.all([
+            Leads.count({ where: { assigned_to_fk: agent_id } }),
+            Properties.count({ where: { assign_to: agent_id } }),
+            CustomerFeedback.count({ where: { agent_id: agent_id } }),
+        ]);
+
+        // 🏷️ Response
+        const response = {
+            total_leads: totalLeads,
+            team_members_count: teamMembersCount, // Other agents under the same manager
+            total_properties: totalProperties,
+            total_feedbacks: totalFeedbacks,
+        };
+
+        res.status(200).json(new ApiResponse(200, response, "Agent dashboard counts fetched successfully."));
+    } catch (error) {
+        console.error("Error fetching counts:", error);
+        next(new ApiError(500, "Something went wrong while fetching counts."));
     }
 });

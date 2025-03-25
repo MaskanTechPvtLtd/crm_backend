@@ -17,6 +17,14 @@ const Properties = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    owner_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    owner_phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
     address: {
       type: DataTypes.STRING(255),
       allowNull: false,

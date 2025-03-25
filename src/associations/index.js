@@ -6,7 +6,6 @@ import { UserAuthAssociation } from "./userAuth.associations.js";
 import { AttendanceAssociation } from "./attendance.associations.js";
 import { PropertyMediaAssociation } from "./propertyMedia.associations.js";
 import { TasksAssociation } from "./tasks.associations.js";
-import { TaskCommentsAssociation } from "./taskComments.associations.js";
 import { NotificationAssociation } from "./notification.associations.js";
 import { CustomerFeedbackAssociations } from "./customerfeedback.associations.js";
 
@@ -19,7 +18,6 @@ export const applyAllAssociations = () => {
   UserAuthAssociation();
   AttendanceAssociation();
   TasksAssociation();
-  TaskCommentsAssociation();
   NotificationAssociation();
   CustomerFeedbackAssociations();
 };

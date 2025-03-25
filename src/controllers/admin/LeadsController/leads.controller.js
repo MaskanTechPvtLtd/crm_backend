@@ -130,7 +130,6 @@ export const EditLead = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 export const GetLeadById = asyncHandler(async (req, res, next) => {
   try {
     const { lead_id } = req.params;
@@ -336,7 +335,6 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
     next(new ApiError(500, "Something went wrong while fetching interactions."));
   }
 });
-
 
 export const DeleteLead = asyncHandler(async (req, res, next) => {
   try {
