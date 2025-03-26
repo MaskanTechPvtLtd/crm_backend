@@ -430,13 +430,13 @@ export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
         }
 
         // Check if any properties are already assigned
-        const alreadyAssigned = properties.filter(prop => prop.assign_to);
-        if (alreadyAssigned.length > 0) {
-            const alreadyAssignedDetails = alreadyAssigned.map(prop =>
-                `${prop.title} (ID: ${prop.property_id}) to agent ID ${prop.assign_to}`
-            );
-            return next(new ApiError(400, `Some properties are already assigned: ${alreadyAssignedDetails.join(', ')}`));
-        }
+        // const alreadyAssigned = properties.filter(prop => prop.assign_to);
+        // if (alreadyAssigned.length > 0) {
+        //     const alreadyAssignedDetails = alreadyAssigned.map(prop =>
+        //         `${prop.title} (ID: ${prop.property_id}) to agent ID ${prop.assign_to}`
+        //     );
+        //     return next(new ApiError(400, `Some properties are already assigned: ${alreadyAssignedDetails.join(', ')}`));
+        // }
 
         // Get the logged-in user's ID from the JWT middleware
         const loggedInUserId = req.user.user_id;
