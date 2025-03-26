@@ -523,3 +523,64 @@ export const changePassword = asyncHandler(async (req, res) => {
       )
     );
 });
+
+export const resendPasswordResetOTP = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+
+  if (!validateEmail(email)) {
+    throw new ApiError(400, "Invalid email");
+  }
+
+  // Find employee by email
+  const employee = await Employee.findOne({ where: { email } });
+  if (!employee) {
+    throw new ApiError(404, "No user found with this email");
+  }
+
+  // Find user authentication record
+  const user = await UserAuth.findOne({ where: { employee_id: employee.employee_id } });
+  if (!user) {
+    throw new ApiError(404, "User authentication data not found");
+  }
+
+  // Check if the last OTP request was within 30 seconds
+  const timeSinceLastOTP = Date.now() - (user.otpExpiry - 15 * 60 * 1000);
+  if (timeSinceLastOTP < 30 * 1000) {
+    throw new ApiError(429, "Please wait 30 seconds before requesting a new OTP");
+  }
+
+  // Generate a new OTP and expiry time
+  const otp = generateOTP();
+  const otpExpiry = Date.now() + 15 * 60 * 1000; // 15 minutes expiry
+
+  // Update OTP in database
+  await UserAuth.update(
+    { otp, otpExpiry },
+    { where: { employee_id: employee.employee_id } }
+  );
+
+  // Prepare email content
+  const subject = 'Resend: Password Reset OTP';
+  const text = `Your new OTP for password reset is: ${otp}. It will expire in 15 minutes.`;
+  const html = getForgotPasswordTemplate({
+    otp,
+    heading: 'Resend: Password Reset OTP',
+    companyName: 'Your Company Name',
+    supportEmail: 'support@yourcompany.com',
+    website: 'https://yourcompany.com',
+    email,
+  });
+
+  try {
+    await sendEmail(email, subject, text, html);
+    return res.status(200).json(
+      createResponse(
+        200,
+        { employee_id: employee.employee_id, email },
+        "New OTP sent successfully. Please check your email."
+      )
+    );
+  } catch (error) {
+    throw new ApiError(500, "Failed to resend password reset OTP");
+  }
+});
