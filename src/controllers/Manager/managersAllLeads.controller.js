@@ -129,7 +129,7 @@ export const ManagerAssignLeadstoAgent = asyncHandler(async (req, res, next) => 
             entityId: lead_id,
             notificationType: "Assignment",
             title: "New Lead Assignment",
-            message: `You have been assigned a new Lead ${lead.first_name}. Please review the details.`,
+            message: `You have been assigned a new Lead ${lead.first_name}, by Manager. Please review the details.`,
         });
         if (updatedCount === 0) {
             return next(new ApiError(500, "Failed to assign the lead to the agent."));

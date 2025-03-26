@@ -265,7 +265,7 @@ export const AssignLeadToAgent = asyncHandler(async (req, res, next) => {
       entityId: lead_id,
       notificationType: "Assignment",
       title: "New Lead Assignment",
-      message: "You have been assigned a new Lead. Please review the details.",
+      message: `You have been assigned a new Lead ${lead.first_name} ${lead.last_name}. Please review the details.`,
     });
 
     res.status(200).json(new ApiResponse(200, lead, "Lead successfully assigned to the agent."));
@@ -437,7 +437,7 @@ export const AssignLeadsToAgent = asyncHandler(async (req, res, next) => {
     );
 
     // Step 6: Send notification to the agent
-    const leadDetails = leads.map(lead => lead.first_name).join(', '); // You can customize this based on available lead fields
+    const leadDetails = leads.map(lead => `${lead.first_name} ${lead.last_name}`).join(', ');
     await sendNotification({
       recipientUserId: employee_id,
       senderId: adminId,

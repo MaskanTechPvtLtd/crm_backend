@@ -122,7 +122,7 @@ export const UpdatePropertyStatus = asyncHandler(async (req, res, next) => {
         }
 
         // Construct the notification message dynamically
-        const notificationMessage = `Property (ID: ${property_id}) status has been updated to "${updatedStatus.status_name}" by ${loggedInEmployee.first_name}. Please review the changes.`;
+        const notificationMessage = `Property  ${property.title} status has been updated to "${updatedStatus.status_name}" by ${loggedInEmployee.first_name}. Please review the changes.`;
 
         // Send notification to the admin
         await sendNotification({

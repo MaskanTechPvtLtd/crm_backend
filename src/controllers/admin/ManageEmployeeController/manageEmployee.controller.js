@@ -269,7 +269,7 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
     );
 
     // Send notification to the manager
-    const agentNames = agents.map(agent => agent.first_name).join(', ');
+    const agentNames = agents.map(agent => `${agent.first_name} ${agent.last_name}`).join(', ');
     await sendNotification({
       recipientUserId: manager_id,
       senderId: loggedInEmployeeId,

@@ -205,8 +205,8 @@ export const resendOTP = asyncHandler(async (req, res) => {
 
   // Check if last OTP was sent less than 2 minutes ago
   const timeSinceLastOTP = Date.now() - (user.otpExpiry - (15 * 60 * 1000));
-  if (timeSinceLastOTP < 2 * 60 * 1000) {
-    throw new ApiError(429, "Please wait 2 minutes before requesting a new OTP");
+  if (timeSinceLastOTP < 30 * 1000) {
+    throw new ApiError(429, "Please wait 30 seconds before requesting a new OTP");
   }
 
   // Generate new OTP
