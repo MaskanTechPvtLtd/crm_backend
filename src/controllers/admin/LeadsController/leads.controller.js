@@ -478,3 +478,25 @@ export const AssignLeadsToAgent = asyncHandler(async (req, res, next) => {
     next(new ApiError(500, "Something went wrong while assigning the leads."));
   }
 });
+
+export const toggleArchiveLead = asyncHandler(async (req, res, next) => {
+  const { lead_id } = req.params;
+
+  // Find the lead by primary key
+  const lead = await Lead.findByPk(lead_id);
+
+  // If lead is not found, return 404 error
+  if (!lead) {
+    return next(new ApiError(404, "Lead not found."));
+  }
+
+  // Toggle archive status
+  const newStatus = !lead.isArchived;
+  await lead.update({ isArchived: newStatus });
+
+  const message = newStatus
+    ? "Lead archived successfully."
+    : "Lead unarchived successfully.";
+
+  res.status(200).json(new ApiResponse(200, { lead_id, isArchived: newStatus }, message));
+});

@@ -99,6 +99,10 @@ const Properties = sequelize.define(
       },
       onDelete: "SET NULL",
     },
+    isArchived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+  },
   },
   {
     tableName: "properties",

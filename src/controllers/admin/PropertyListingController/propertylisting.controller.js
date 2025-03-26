@@ -524,3 +524,31 @@ export const AssignPropertyToAgent = asyncHandler(async (req, res, next) => {
         next(new ApiError(500, "Something went wrong while assigning the properties."));
     }
 });
+
+export const toggleArchiveProperty = asyncHandler(async (req, res, next) => {
+    const { property_id } = req.params;
+  
+    // Check if the property exists
+    const property = await Properties.findOne({ where: { property_id } });
+  
+    if (!property) {
+      return next(new ApiError(404, "Property not found."));
+    }
+  
+    // Toggle archive status
+    const newStatus = !property.isArchived;
+    const updatedStatusId = newStatus ? 6 : 1; // Assuming 6 means "archived" and null means "active"
+  
+    await Properties.update(
+      { status_id: updatedStatusId, isArchived: newStatus },
+      { where: { property_id } }
+    );
+  
+    const message = newStatus
+      ? "Property archived successfully."
+      : "Property unarchived successfully.";
+  
+    res.status(200).json(new ApiResponse(200, { property_id, isArchived: newStatus }, message));
+  });
+  
+

@@ -75,6 +75,10 @@ const Lead = sequelize.define(
       },
       onDelete: "SET NULL",
     },
+    isArchived: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
