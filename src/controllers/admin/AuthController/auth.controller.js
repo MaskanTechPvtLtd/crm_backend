@@ -263,6 +263,8 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   if (!user) throw new ApiError(401, "Invalid credentials");
+  if (!user.Employee.is_active) throw new ApiError(403, "Your account has been blocked. Please contact the administrator.");
+  // if (!user.Employee.isVerified) throw new ApiError(403, "Please verify your email to login.");
 
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.password_hash);
