@@ -10,6 +10,7 @@ import PropertyType from "../../../models/propertytypes.model.js";
 import LeadStatus from "../../../models/leadstatus.model.js";
 import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
+import Properties from "../../../models/properties.model.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
 
 
@@ -319,17 +320,17 @@ export const getLeadInteractions = asyncHandler(async (req, res, next) => {
       raw: true, // ✅ Returns flat JSON data instead of nested objects
       nest: true, // ✅ Ensures Employee object remains intact
     });
-    
+
     // ✅ Move status_name from status object to the main object
     const formattedInteractions = interactions.map(interaction => ({
       ...interaction,
       status_name: interaction["status.status_name"], // Move status_name to main object
     }));
-    
+
     res.status(200).json(
       new ApiResponse(200, { lead_status: lead.LeadStatus.status_name, interactions: formattedInteractions }, "Lead interactions and status retrieved successfully.")
     );
-    
+
   } catch (error) {
     console.error("Error fetching interactions:", error);
     next(new ApiError(500, "Something went wrong while fetching interactions."));
@@ -499,4 +500,45 @@ export const toggleArchiveLead = asyncHandler(async (req, res, next) => {
     : "Lead unarchived successfully.";
 
   res.status(200).json(new ApiResponse(200, { lead_id, isArchived: newStatus }, message));
+});
+
+
+export const suggestProperties = asyncHandler(async (req, res) => {
+  const { leadId } = req.params;
+
+  if (!leadId) throw new ApiError(400, "Lead ID is required");
+
+  // Fetch lead details
+  const lead = await Lead.findOne({
+    where: { lead_id: leadId },
+    attributes: ["budget_min", "budget_max", "preferred_type_id_fk"],
+  });
+
+  if (!lead) throw new ApiError(404, "Lead not found");
+
+  const { budget_min, budget_max, preferred_type_id_fk } = lead;
+
+  // Fetch properties matching the lead's preferences
+  const properties = await Properties.findAll({
+    where: {
+      [Op.or]: [
+        {
+          price: {
+            [Op.between]: [budget_min || 0, budget_max || Number.MAX_VALUE],
+          },
+        },
+        {
+          property_type_id: preferred_type_id_fk,
+        }
+      ],
+      isArchived: false, // This will always be applied
+    },
+  });
+
+
+  if (!properties.length) throw new ApiError(404, "No matching properties found");
+
+  // return res.status(200).json((200, properties, "Properties suggested successfully"));
+  res.status(200).json(new ApiResponse(200,  properties, "Properties suggested successfully"));
+
 });

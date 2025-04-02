@@ -1,7 +1,7 @@
 import express from "express";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import { upload } from "../../middlewares/multer.middleware.js";
-import { addProperty, GetAllProperties, GetPropertyById, UpdateProperty, DeleteProperty, AssignPropertyToAgent, toggleArchiveProperty } from "../../controllers/admin/PropertyListingController/propertylisting.controller.js";
+import { addProperty, GetAllProperties, GetPropertyById, UpdateProperty, DeleteProperty, AssignPropertyToAgent, toggleArchiveProperty, suggestLeads } from "../../controllers/admin/PropertyListingController/propertylisting.controller.js";
 
 const router = express.Router();
 
@@ -12,6 +12,8 @@ router.put("/updateproperty/:property_id", verifyJWT, upload.array("media", 5), 
 router.put("/toggle-archive/:property_id", verifyJWT, toggleArchiveProperty);
 router.delete("/deleteproperty/:property_id", verifyJWT, DeleteProperty);
 router.post("/assign-property", verifyJWT, AssignPropertyToAgent);
+router.get("/suggest-leads/:property_id", verifyJWT, suggestLeads)
+
 
 
 export default router;

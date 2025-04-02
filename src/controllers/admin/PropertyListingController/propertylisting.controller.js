@@ -11,7 +11,8 @@ import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
 import { convertUTCToLocal } from "../../../utils/DateHelper.utils.js";
 import { sequelize } from "../../../db/index.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
-
+import { Op } from "sequelize";
+import Lead from "../../../models/leads.model.js";
 
 // Add a new property
 export const addProperty = asyncHandler(async (req, res, next) => {
@@ -551,4 +552,38 @@ export const toggleArchiveProperty = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, { property_id, isArchived: newStatus }, message));
 });
 
-
+export const suggestLeads = asyncHandler(async (req, res) => {
+    const { property_id } = req.params;
+  
+    if (!property_id) throw new ApiError(400, "Property ID is required");
+  
+    // Fetch property details
+    const property = await Properties.findOne({
+      where: { property_id: property_id },
+      attributes: ["price", "property_type_id"],
+    });
+  
+    if (!property) throw new ApiError(404, "Property not found");
+  
+    const { price, property_type_id } = property;
+  
+    // Fetch leads matching the property's price range OR preferred property type
+    const leads = await Lead.findAll({
+      where: {
+        [Op.or]: [
+          {
+            budget_min: { [Op.lte]: price },
+            budget_max: { [Op.gte]: price },
+          },
+          {
+            preferred_type_id_fk: property_type_id,
+          },
+        ],
+        isArchived: false,
+      },
+    });
+  
+    if (!leads.length) throw new ApiError(404, "No matching leads found");
+  
+    res.status(200).json(new ApiResponse(200, leads, "Leads suggested successfully"));
+  });
