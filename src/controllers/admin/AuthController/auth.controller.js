@@ -504,7 +504,7 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   // Check old password
   const isPasswordValid = await bcrypt.compare(oldPassword, user.password_hash);
-  if (!isPasswordValid) throw new ApiError(401, "Invalid old password");
+  if (!isPasswordValid) throw new ApiError(400, "Invalid old password");
 
   // Hash new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
