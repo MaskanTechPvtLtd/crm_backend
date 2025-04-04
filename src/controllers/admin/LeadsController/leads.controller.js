@@ -11,6 +11,7 @@ import LeadStatus from "../../../models/leadstatus.model.js";
 import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
 import Properties from "../../../models/properties.model.js";
+import PropertyMedia from "../../../models/propertymedia.model.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
 
 
@@ -518,7 +519,7 @@ export const suggestProperties = asyncHandler(async (req, res) => {
 
   const { budget_min, budget_max, preferred_type_id_fk } = lead;
 
-  // Fetch properties matching the lead's preferences
+  // Fetch properties matching the lead's preferences with media included
   const properties = await Properties.findAll({
     where: {
       [Op.or]: [
@@ -531,14 +532,19 @@ export const suggestProperties = asyncHandler(async (req, res) => {
           property_type_id: preferred_type_id_fk,
         }
       ],
-      isArchived: false, // This will always be applied
+      isArchived: false, // Always applied
     },
+    include: [
+      {
+        model: PropertyMedia,
+        as: "propertyMedia",
+        attributes: ["media_id", "media_type", "file_url"], // Only necessary fields
+      },
+    ],
   });
-
 
   if (!properties.length) throw new ApiError(404, "No matching properties found");
 
-  // return res.status(200).json((200, properties, "Properties suggested successfully"));
-  res.status(200).json(new ApiResponse(200,  properties, "Properties suggested successfully"));
-
+  res.status(200).json(new ApiResponse(200, properties, "Properties suggested successfully"));
 });
+
