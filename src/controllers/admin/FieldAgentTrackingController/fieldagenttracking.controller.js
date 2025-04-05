@@ -4,6 +4,7 @@ import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import Employee from "../../../models/employee.model.js";
 import EmployeeLocation from "../../../models/employeelocations.model.js";
 import { Op } from "sequelize";
+import dayjs from 'dayjs';
 
 // ✅ Add Employee Location this will at sales agent side 
 export const addEmployeeLocation = asyncHandler(async (req, res, next) => {
@@ -31,26 +32,57 @@ export const addEmployeeLocation = asyncHandler(async (req, res, next) => {
 });
 
 // ✅ Get All Employee Locations
+// export const getAllEmployeeLocations = asyncHandler(async (req, res, next) => {
+//     try {
+//         const employees = await Employee.findAll({
+//             where: {
+//                 role: { [Op.notIn]: ["Admin", "Manager"] }, // Exclude employees with role "Admin" and "Manager"
+//             },
+//             include: [
+//                 {
+//                     model: EmployeeLocation,
+//                     as: "locations", // Ensure this matches your model association
+//                     attributes: ["latitude", "longitude", "timestamp"],
+//                 },
+//             ],
+//         });
+
+//         return res.status(200).json(new ApiResponse(200, employees));
+//     } catch (error) {
+//         return next(new ApiError(500, "Failed to fetch employee locations", error));
+//     }
+// });
+
 export const getAllEmployeeLocations = asyncHandler(async (req, res, next) => {
     try {
-        const employees = await Employee.findAll({
+      const startOfDay = dayjs().startOf('day').toDate();
+      const endOfDay = dayjs().endOf('day').toDate();
+  
+      const employees = await Employee.findAll({
+        where: {
+          role: { [Op.notIn]: ["Admin", "Manager"] }, // Exclude Admin and Manager
+        },
+        include: [
+          {
+            model: EmployeeLocation,
+            as: "locations",
+            attributes: ["latitude", "longitude", "timestamp"],
+            required: false, // still include employees even if they don't have location data today
             where: {
-                role: { [Op.notIn]: ["Admin", "Manager"] }, // Exclude employees with role "Admin" and "Manager"
+              timestamp: {
+                [Op.between]: [startOfDay, endOfDay],
+              },
             },
-            include: [
-                {
-                    model: EmployeeLocation,
-                    as: "locations", // Ensure this matches your model association
-                    attributes: ["latitude", "longitude", "timestamp"],
-                },
-            ],
-        });
-
-        return res.status(200).json(new ApiResponse(200, employees));
+          },
+        ],
+      });
+  
+      return res.status(200).json(new ApiResponse(200, employees));
     } catch (error) {
-        return next(new ApiError(500, "Failed to fetch employee locations", error));
+      return next(new ApiError(500, "Failed to fetch employee locations", error));
     }
-});
+  });
+
 
 // ✅ Get Locations for a Specific Employee
 export const getEmployeeLocationsById = asyncHandler(async (req, res, next) => {
