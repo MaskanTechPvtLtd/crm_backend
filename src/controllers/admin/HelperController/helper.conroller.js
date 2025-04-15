@@ -8,6 +8,7 @@ import LeadStatus from "../../../models/leadstatus.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../../utils/ApiResponse.utils.js"
+import { predefinedStatuses, predefinedLeadSources, predefinedPropertyTypes, predefinedLeadStatuses } from "../../../constants.js";
 
 
 export const GetStatus = asyncHandler(async (req, res, next) => {
@@ -51,3 +52,99 @@ export const GetLeadStatus = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, statuses, "Statuses retrieved successfully."));
 
 })
+
+export const SeedStatuses = asyncHandler(async (req, res, next) => {
+    try {
+        const insertResults = [];
+
+        for (const status of predefinedStatuses) {
+            const [entry, created] = await Statuses.findOrCreate({
+                where: { status_name: status.status_name },
+                defaults: { status_id: status.status_id },
+            });
+
+            insertResults.push({
+                status_name: status.status_name,
+                created,
+            });
+        }
+
+        res.status(201).json(
+            new ApiResponse(201, insertResults, "Statuses seeded successfully.")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiError(500, [], "Failed to seed statuses."));
+    }
+});
+
+export const SeedLeadSources = asyncHandler(async (req, res, next) => {
+    try {
+        const insertResults = [];
+
+        for (const source of predefinedLeadSources) {
+            const [entry, created] = await Leadsources.findOrCreate({
+                where: { source_name: source.source_name },
+                defaults: { source_id: source.source_id },
+            });
+
+            insertResults.push({
+                source_name: source.source_name,
+                created,
+            });
+        }
+
+        res.status(201).json(
+            new ApiResponse(201, insertResults, "Lead sources seeded successfully.")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiError(500, [], "Failed to seed lead sources."));
+    }
+});
+
+export const SeedPropertyTypes = asyncHandler(async (req, res, next) => {
+    try {
+        const insertResults = [];
+
+        for (const type of predefinedPropertyTypes) {
+            const [entry, created] = await PropertyType.findOrCreate({
+                where: { type_name: type.type_name },
+                defaults: { property_type_id: type.property_type_id },
+            });
+
+            insertResults.push({
+                type_name: type.type_name,
+                created,
+            });
+        }
+
+        res.status(201).json(
+            new ApiResponse(201, insertResults, "Property types seeded successfully.")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiError(500, [], "Failed to seed property types."));
+    }
+});
+
+export const SeedLeadStatuses = asyncHandler(async (req, res, next) => {
+    try {
+        const insertResults = [];
+
+        for (const status of predefinedLeadStatuses) {
+            const [entry, created] = await LeadStatus.findOrCreate({
+                where: { status_name: status.status_name },
+                defaults: { status_id: status.status_id },
+            });
+
+            insertResults.push({
+                status_name: status.status_name,
+                created,
+            });
+        }
+
+        res.status(201).json(
+            new ApiResponse(201, insertResults, "Lead statuses seeded successfully.")
+        );
+    } catch (error) {
+        return res.status(500).json(new ApiError(500, [], "Failed to seed lead statuses."));
+    }
+});

@@ -16,8 +16,8 @@ export const dialect = String(process.env.DILECT);
 // emailTemplates.js
 
 // Function to generate the HTML with dynamic OTP
-export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com',}) =>
-    `<!DOCTYPE html>
+export const getVerificationEmailTemplate = ({ otp, companyName = 'Your Company Name', supportEmail = 'support@yourcompany.com', website = 'https://yourcompany.com', }) =>
+  `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -222,3 +222,43 @@ export const getForgotPasswordTemplate = ({ otp, companyName = 'Your Company Nam
   </body>
   </html>
 `;
+
+export const predefinedStatuses = [
+  { status_id: 1, status_name: "active" },
+  { status_id: 2, status_name: "pending" },
+  { status_id: 3, status_name: "completed" },
+  { status_id: 4, status_name: "cancelled" },
+  { status_id: 5, status_name: "in_progress" },
+  { status_id: 6, status_name: "archived" },
+  { status_id: 7, status_name: "inactive" },
+  { status_id: 8, status_name: "sold" },
+];
+
+export const predefinedLeadSources = [
+  { source_id: 1, source_name: "website" },
+  { source_id: 2, source_name: "social media" },
+  { source_id: 3, source_name: "referral" },
+  { source_id: 4, source_name: "cold call" },
+  { source_id: 5, source_name: "email_campaign" },
+  { source_id: 6, source_name: "walk_in" },
+];
+
+export const predefinedPropertyTypes = [
+  { property_type_id: 1, type_name: "apartment" },
+  { property_type_id: 2, type_name: "house" },
+  { property_type_id: 3, type_name: "villa" },
+  { property_type_id: 4, type_name: "commercial" },
+  { property_type_id: 5, type_name: "land" },
+  { property_type_id: 6, type_name: "townhouse" },
+];
+
+
+export const predefinedLeadStatuses = [
+  { status_id: 1, status_name: "new_lead" },
+  { status_id: 2, status_name: "contacted" },
+  { status_id: 3, status_name: "interested" },
+  { status_id: 4, status_name: "under_negotiation" },
+  { status_id: 5, status_name: "finalized" },
+  { status_id: 6, status_name: "closed" },
+  { status_id: 7, status_name: "not_interested" },
+];
