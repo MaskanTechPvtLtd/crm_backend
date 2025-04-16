@@ -20,11 +20,17 @@ import ManagersEmployeesRoutes from "./routes/manager/ManagersEmployee.router.js
 import ManagerspreoperitesRoutes from "./routes/manager/ManagersProperties.router.js"
 import ManagersFieldAgentsRoutes from "./routes/manager/ManagersFieldAgents.router.js"
 import ManagersDashbordroutes from "./routes/manager/ManagersDashbord.router.js"
+import FaceRecognationRoutes from "./routes/admin/recognize.routes.js";
 import validateAndSanitize from "./middlewares/validateAndSanitize.middleware.js";
 import requestLogger from './middlewares/requestLogger.middleware.js';
 import errorLogger from "./middlewares/errorLogger.middleware.js";
 import helmetMiddleware from "./middlewares/helmet.Middleware.js";
 const app = express();
+
+
+import { loadModels } from './utils/faceapi-config.utils.js';
+import { loadKnownFaces } from './utils/faceservice.utils.js';
+// import { setFaceMatcher } from './controllers/admin/recognizeController/recognize.controller.js';
 
 app.use(
   cors({
@@ -79,7 +85,11 @@ app.use("/api/v1/manager", ManagerspreoperitesRoutes);
 app.use("/api/v1/manager", ManagersFieldAgentsRoutes);
 app.use("/api/v1/manager", ManagersDashbordroutes);
 
-
+//face recognition routes
+app.use("/api/v1/face", FaceRecognationRoutes); // Assuming you have a route for face recognition
+await loadModels();
+const matcher = await loadKnownFaces();
+// setFaceMatcher(matcher);
 // Error logger middleware (should be after all other middlewares and routes)
 app.use(errorLogger);
 

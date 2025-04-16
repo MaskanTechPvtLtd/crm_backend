@@ -151,8 +151,10 @@ export const GetManagerDashbordCounts = asyncHandler(async (req, res, next) => {
         // Get total leads & properties assigned to the manager and sales agents
         const totalLeads = await Lead.count({ where: { assigned_to_fk: { [Op.in]: teamIds } } });
         const totalProperties = await Properties.count({ where: { assign_to: { [Op.in]: teamIds } } });
-        const totalFeedbacks = await Customerfeedback.count({ where: { agent_id: { [
-            Op.in]: teamIds } } });
+        const totalFeedbacks = await Customerfeedback.count(
+            // { where: { agent_id: { [
+            // Op.in]: teamIds } } }
+        );
 
         // 🏷️ Response
         const response = {

@@ -140,7 +140,9 @@ export const GetAgentsDashbordCounts = asyncHandler(async (req, res, next) => {
         const [totalLeads, totalProperties, totalFeedbacks] = await Promise.all([
             Leads.count({ where: { assigned_to_fk: agent_id } }),
             Properties.count({ where: { assign_to: agent_id } }),
-            CustomerFeedback.count({ where: { agent_id: agent_id } }),
+            CustomerFeedback.count(
+                // { where: { agent_id: agent_id } } // Assuming agent_id is the correct field in CustomerFeedback model
+            ),
         ]);
 
         // 🏷️ Response
