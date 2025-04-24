@@ -16,6 +16,8 @@ import { ApiResponse } from "../../../utils/ApiResponse.utils.js";
 import dayjs from "dayjs";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
 import { getLoggedInUserRole } from "../../../utils/LoggedInUser.utils.js";
+import { sendEmail } from "../../../utils/emailService.utils.js";
+import { generateStrongPassword, getEmployeeCredentialEmailTemplate } from "../../../constants.js";
 
 
 export const GetAllEmployees = asyncHandler(async (req, res, next) => {
@@ -54,36 +56,84 @@ export const GetEmployeebyId = asyncHandler(async (req, res) => {
   }
 });
 
-export const CreateEmployee = asyncHandler(async (req, res) => {
+export const CreateEmployee = asyncHandler(async (req, res, next) => {
   try {
-    const { name, email, password, role, department, designation, phone, address, dob, doj, salary, profilePic } = req.body;
-    // Check if the email already exists
-    const employee = await Employee.findOne({ where: { email } });
-    if (employee) {
-      return next(new ApiError(400, "Employee with this email already exists."));
-    }
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    // Create the employee
-    const newEmployee = await Employee.create({
-      name,
+    const {
+      first_name,
+      last_name,
       email,
-      password: hashedPassword,
-      role,
-      department,
-      designation,
       phone,
-      address,
-      dob,
-      doj,
-      salary,
-      profilePic,
+      role,
+      username,
+    } = req.body;
+
+    // Validations
+    // if (!validateEmail(email)) throw new ApiError(400, "Invalid email format");
+    // if (!validateMobile(phone)) throw new ApiError(400, "Invalid mobile number");
+
+    const existingEmployee = await Employee.findOne({
+      where: { [Sequelize.Op.or]: [{ email }, { phone }] },
     });
-    // Send the response
-    res.json(new ApiResponse(201, newEmployee, "Employee created successfully."));
+    if (existingEmployee) throw new ApiError(400, "Employee already exists");
+
+    const existingUser = await UserAuth.findOne({ where: { username } });
+    if (existingUser) throw new ApiError(400, "Username already taken");
+
+    const generatedPassword = generateStrongPassword(); // default 12-char
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+    // ✅ Check if file was uploaded before accessing it
+    let avatar = "" // Keep existing profile picture by default
+    if (req.files && req.files.profile_picture && req.files.profile_picture.length > 0) {
+      const profilePicPath = req.files.profile_picture[0].path;
+      console.log("profilePicPath", profilePicPath)
+      avatar = await uploadOnCloudinary(profilePicPath);
+    }
+
+
+    const newEmployee = await Employee.create({
+      first_name,
+      last_name,
+      email,
+      phone,
+      role,
+      profile_picture: avatar.secure_url, // Keep existing if no new one is uploaded
+      isVerified: true,
+    });
+
+    await UserAuth.create({
+      employee_id: newEmployee.employee_id,
+      username,
+      password_hash: hashedPassword,
+    });
+
+    // Prepare email content
+    const subject = "Your Login Credentials";
+    const text = `Hi ${first_name},\n\nYou have been added to the system as a ${role}.\n\nLogin details:\nUsername: ${username}\nPassword: ${generatedPassword}\n\nPlease login and change your password after your first login.`;
+    const html = getEmployeeCredentialEmailTemplate({
+      first_name,
+      role,
+      username,
+      password: generatedPassword,
+    });
+
+    try {
+      await sendEmail(email, subject, text, html);
+    } catch (emailError) {
+      console.error("Failed to send login email:", emailError);
+      // Optional: rollback creation
+      await newEmployee.destroy();
+      throw new ApiError(500, "Employee created but failed to send email. Please try again.");
+    }
+
+    res.status(201).json(
+      new ApiResponse(201, { employee_id: newEmployee.employee_id }, "Employee created and credentials sent via email")
+    );
   } catch (err) {
     console.error("Error creating employee:", err);
-    next(new ApiError(500, "Something went wrong while creating employee."));
+    if (err instanceof ApiError) {
+      return next(err); // pass original error through
+    }
+    next(new ApiError(500, "Something went wrong while creating employee"));
   }
 });
 
@@ -241,7 +291,7 @@ export const assignAgentToManager = asyncHandler(async (req, res, next) => {
 
     // Validate and process all agents
     const agents = await Employee.findAll({
-      where: { 
+      where: {
         employee_id: validAgentIds, // Use filtered valid IDs
         role: "Sales Agent"
       },

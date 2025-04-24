@@ -87,8 +87,8 @@ app.use("/api/v1/manager", ManagersDashbordroutes);
 
 //face recognition routes
 app.use("/api/v1/face", FaceRecognationRoutes); // Assuming you have a route for face recognition
-await loadModels();
-const matcher = await loadKnownFaces();
+// await loadModels();
+// const matcher = await loadKnownFaces();
 // setFaceMatcher(matcher);
 // Error logger middleware (should be after all other middlewares and routes)
 app.use(errorLogger);

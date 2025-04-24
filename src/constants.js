@@ -222,6 +222,41 @@ export const getForgotPasswordTemplate = ({ otp, companyName = 'Your Company Nam
   </body>
   </html>
 `;
+export const getEmployeeCredentialEmailTemplate = ({
+  first_name,
+  role,
+  username,
+  password,
+  companyName = "Mobile CRM",
+  supportEmail = "support@yourcrm.com",
+  website = "https://yourcrm.com",
+}) => {
+  return `
+    <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; color: #333;">
+      <h2 style="color: #4CAF50;">Welcome to ${companyName}, ${first_name}!</h2>
+      <p>You have been successfully added as a <strong>${role}</strong>.</p>
+
+      <h3 style="color: #333;">Login Credentials</h3>
+      <ul>
+        <li><strong>Username:</strong> ${username}</li>
+        <li><strong>Password:</strong> ${password}</li>
+      </ul>
+
+      <p>You can use your <strong>email</strong>, <strong>phone number</strong>, or <strong>username</strong> to log in.</p>
+      <p><strong>Please update your password after your first login for security purposes.</strong></p>
+
+      <p>If you have any issues, feel free to reach out to us at 
+        <a href="mailto:${supportEmail}">${supportEmail}</a>.
+      </p>
+
+      <p>Visit our website: <a href="${website}" target="_blank">${website}</a></p>
+
+      <br />
+      <p>Regards,</p>
+      <p><strong>${companyName} Team</strong></p>
+    </div>
+  `;
+};
 
 export const predefinedStatuses = [
   { status_id: 1, status_name: "active" },
@@ -262,3 +297,58 @@ export const predefinedLeadStatuses = [
   { status_id: 6, status_name: "closed" },
   { status_id: 7, status_name: "not_interested" },
 ];
+
+export const predefinedPropertyAmenities = [
+  { amenity_id: 1, amenity_name: "swimming_pool" },
+  { amenity_id: 2, amenity_name: "gymnasium" },
+  { amenity_id: 3, amenity_name: "parking" },
+  { amenity_id: 4, amenity_name: "24x7_security" },
+  { amenity_id: 5, amenity_name: "power_backup" },
+  { amenity_id: 6, amenity_name: "lift_elevator" },
+  { amenity_id: 7, amenity_name: "clubhouse" },
+  { amenity_id: 8, amenity_name: "garden_park" },
+  { amenity_id: 9, amenity_name: "childrens_play_area" },
+  { amenity_id: 10, amenity_name: "gated_community" },
+  { amenity_id: 11, amenity_name: "cctv_surveillance" },
+  { amenity_id: 12, amenity_name: "intercom" },
+  { amenity_id: 13, amenity_name: "rainwater_harvesting" },
+  { amenity_id: 14, amenity_name: "wifi_connectivity" },
+  { amenity_id: 15, amenity_name: "air_conditioning" },
+  { amenity_id: 16, amenity_name: "fire_fighting_systems" },
+  { amenity_id: 17, amenity_name: "visitor_parking" },
+  { amenity_id: 18, amenity_name: "indoor_games" },
+  { amenity_id: 19, amenity_name: "maintenance_staff" },
+  { amenity_id: 20, amenity_name: "jogging_track" },
+];
+
+
+export const generateStrongPassword = (length = 12) => {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*()_+[]{}|;:,.<>?';
+  const all = uppercase + lowercase + numbers + symbols;
+
+  let password = [
+    uppercase[Math.floor(Math.random() * uppercase.length)],
+    lowercase[Math.floor(Math.random() * lowercase.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    symbols[Math.floor(Math.random() * symbols.length)],
+  ];
+
+  for (let i = password.length; i < length; i++) {
+    password.push(all[Math.floor(Math.random() * all.length)]);
+  }
+
+  return password.sort(() => 0.5 - Math.random()).join('');
+};
+export const predefinepropertyStatuses = [
+  { status_id: 1, status_name: "ready_to_move" },
+  { status_id: 2, status_name: "under_construction" },
+  { status_id: 3, status_name: "sold" },
+  { status_id: 4, status_name: "available" },
+  { status_id: 5, status_name: "rented" },
+  { status_id: 6, status_name: "off_market" },
+  { status_id: 7, status_name: "under_renovation" }
+];
+

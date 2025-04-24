@@ -16,7 +16,7 @@ import {
     GetUnassignedProperties,
     GetUnassignedLeads,
     toggleEmployeeStatus,
-    GetInactiveEmployees
+    GetInactiveEmployees, CreateEmployee,
 } from "../../controllers/admin/ManageEmployeeController/manageEmployee.controller.js";
 
 const router = express.Router();
@@ -37,4 +37,7 @@ router.get("/get-unassign-leads", verifyJWT, GetUnassignedLeads);
 router.get("/get-unassign-properties", verifyJWT, GetUnassignedProperties);
 router.patch("/block-unblockEmployee/:employee_id", verifyJWT, toggleEmployeeStatus);
 router.get("/getAllblockemployee", verifyJWT, GetInactiveEmployees);
+router.post("/createEmployee", verifyJWT, upload.fields([{ name: "profile_picture", maxCount: 1 }]), CreateEmployee);
+
+
 export default router; 
