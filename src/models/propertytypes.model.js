@@ -14,6 +14,10 @@ const PropertyType = sequelize.define(
       allowNull: false,
       unique: true,
     },
+    category: {
+      type: DataTypes.ENUM("Residential", "Commercial"),
+      allowNull: false,
+      },
   },
   {
     tableName: "propertytypes",

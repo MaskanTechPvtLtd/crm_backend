@@ -36,14 +36,29 @@ export const GetLeadSource = asyncHandler(async (req, res, next) => {
 
 
 export const GetPropertyType = asyncHandler(async (req, res, next) => {
-    const propertytype = await PropertyType.findAll()
-    if (!propertytype || propertytype.length === 0) {
-        return res.status(404).json(new ApiError(404, [], "No statuses found."));
+    try {
+        // Check if category query parameter is present
+        const { category } = req.query;
+
+        // If category is provided, filter by category, otherwise fetch all
+        const propertyTypes = category
+            ? await PropertyType.findAll({
+                  where: { category: category },
+              })
+            : await PropertyType.findAll();
+
+        // If no property types are found
+        if (!propertyTypes || propertyTypes.length === 0) {
+            return res.status(404).json(new ApiError(404, [], "No property types found."));
+        }
+
+        // Return the list of property types
+        res.status(200).json(new ApiResponse(200, propertyTypes, "Property types retrieved successfully."));
+    } catch (error) {
+        next(error);
     }
+});
 
-    res.status(200).json(new ApiResponse(200, propertytype, "Statuses retrieved successfully."));
-
-})
 
 export const GetPropertyAmenities = asyncHandler(async (req, res, next) => {
     const amenity = await Amenity.findAll()
@@ -124,28 +139,35 @@ export const SeedLeadSources = asyncHandler(async (req, res, next) => {
 
 export const SeedPropertyTypes = asyncHandler(async (req, res, next) => {
     try {
-        const insertResults = [];
-
-        for (const type of predefinedPropertyTypes) {
-            const [entry, created] = await PropertyType.findOrCreate({
-                where: { type_name: type.type_name },
-                defaults: { property_type_id: type.property_type_id },
-            });
-
-            insertResults.push({
-                type_name: type.type_name,
-                created,
-            });
-        }
-
-        res.status(201).json(
-            new ApiResponse(201, insertResults, "Property types seeded successfully.")
-        );
+      const insertResults = [];
+  
+      for (const type of predefinedPropertyTypes) {
+        const [entry, created] = await PropertyType.findOrCreate({
+          where: { type_name: type.type_name },
+          defaults: {
+            category: type.category
+          },
+        });
+  
+        insertResults.push({
+          type_name: type.type_name,
+          category: type.category,
+          created,
+        });
+      }
+  
+      res.status(201).json(
+        new ApiResponse(201, insertResults, "Property types seeded successfully.")
+      );
     } catch (error) {
-        return res.status(500).json(new ApiError(500, [], "Failed to seed property types."));
+      console.error("Error seeding property types:", error); // 👈 This logs the actual error
+      return res.status(500).json(
+        new ApiError(500, [], "Failed to seed property types.")
+      );
     }
-});
-
+  });
+  
+  
 export const SeedLeadStatuses = asyncHandler(async (req, res, next) => {
     try {
         const insertResults = [];
