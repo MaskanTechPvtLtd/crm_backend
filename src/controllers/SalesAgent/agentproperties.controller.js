@@ -4,6 +4,9 @@ import PropertyMedia from "../../models/propertymedia.model.js";
 import Employee from "../../models/employee.model.js";
 import UserAuth from "../../models/userauth.model.js";
 import Status from "../../models/statuses.model.js";
+import PropertyStatus from "../../models/propertystatus.model.js";
+import PropertyAmenities from "../../models/propertyAmenities.model.js";
+import Amenity from "../../models/amenities.model.js";
 import { asyncHandler } from "../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../utils/ApiError.utils.js";
 import { ApiResponse } from "../../utils/ApiResponse.utils.js";
@@ -49,6 +52,16 @@ export const getPropertiesByAgent = asyncHandler(async (req, res, next) => {
                     model: Status,
                     as: "status",
                     attributes: ["status_id", "status_name"]
+                },
+                {
+                    model: Amenity,  //  Include Amenity here
+                    attributes: ["amenity_id", "name"],
+                    through: { attributes: [] }, // don't show PropertyAmenities join table data
+                },
+                {
+                    model: PropertyStatus,
+                    as: "propertyStatus",
+                    attributes: ["property_status_id", "status_name"],
                 }
             ]
         });

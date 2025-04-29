@@ -279,18 +279,18 @@ export const predefinedLeadSources = [
 ];
 
 export const predefinedPropertyTypes = [
-  {property_type_id:1, type_name:"flat", category:"Residential"},
-  {property_type_id:2, type_name:"villa", category:"Residential"},
-  {property_type_id:3, type_name:"independent_house", category:"Residential"},
-  {property_type_id:4, type_name:"plot", category:"Residential"},
-  {property_type_id:5, type_name:"apartment", category:"Residential"},
-  {property_type_id:6, type_name:"independent_floor", category:"Residential"},
-  {property_type_id:7, type_name:"studio_apartment", category:"Residential"},
-  {property_type_id:8, type_name:"penthouse", category:"Residential"},
-  {property_type_id:9, type_name:"office_space", category:"Commercial"},
-  {property_type_id:10, type_name:"shop", category:"Commercial"},
-  {property_type_id:11, type_name:"showroom", category:"Commercial"},
-  {property_type_id:12, type_name:"warehouse", category:"Commercial"}
+  { property_type_id: 1, type_name: "flat", category: "Residential" },
+  { property_type_id: 2, type_name: "villa", category: "Residential" },
+  { property_type_id: 3, type_name: "independent_house", category: "Residential" },
+  { property_type_id: 4, type_name: "plot", category: "Residential" },
+  { property_type_id: 5, type_name: "apartment", category: "Residential" },
+  { property_type_id: 6, type_name: "independent_floor", category: "Residential" },
+  { property_type_id: 7, type_name: "studio_apartment", category: "Residential" },
+  { property_type_id: 8, type_name: "penthouse", category: "Residential" },
+  { property_type_id: 9, type_name: "office_space", category: "Commercial" },
+  { property_type_id: 10, type_name: "shop", category: "Commercial" },
+  { property_type_id: 11, type_name: "showroom", category: "Commercial" },
+  { property_type_id: 12, type_name: "warehouse", category: "Commercial" }
 ];
 
 

@@ -145,6 +145,7 @@ export const SeedPropertyTypes = asyncHandler(async (req, res, next) => {
         const [entry, created] = await PropertyType.findOrCreate({
           where: { type_name: type.type_name },
           defaults: {
+            property_type_id: type.property_type_id,
             category: type.category
           },
         });

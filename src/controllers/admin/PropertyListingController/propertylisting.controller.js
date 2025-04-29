@@ -4,6 +4,9 @@ import PropertyType from "../../../models/propertytypes.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
 import Statuses from "../../../models/statuses.model.js";
 import UserAuth from "../../../models/userauth.model.js";
+import PropertyAmenities from "../../../models/propertyAmenities.model.js";
+import Amenity from "../../../models/amenities.model.js";
+import PropertyStatus from "../../../models/propertystatus.model.js";
 import { uploadOnCloudinary } from "../../../utils/Cloudinary.utils.js";
 import { asyncHandler } from "../../../utils/asyncHandler.utils.js";
 import { ApiError } from "../../../utils/ApiError.utils.js";
@@ -16,8 +19,8 @@ import Lead from "../../../models/leads.model.js";
 
 // Add a new property
 export const addProperty = asyncHandler(async (req, res, next) => {
+    const t = await sequelize.transaction(); // 🔥 start transaction
     try {
-        // Ensure req.body is correctly parsed
         const {
             title,
             address,
@@ -26,13 +29,21 @@ export const addProperty = asyncHandler(async (req, res, next) => {
             city,
             state,
             zip_code,
+            latitude,
+            longitude,
             property_type_id,
             price,
             bedrooms,
             bathrooms,
             square_feet,
+            furnishing,
+            floor_number,
+            project_name,
+            possession_date,
             status_id,
+            property_status_id,
             listed_by,
+            assign_to,
             listed_date,
             description,
         } = req.body;
@@ -42,28 +53,58 @@ export const addProperty = asyncHandler(async (req, res, next) => {
             return next(new ApiError(400, "Missing required fields."));
         }
 
-        // Create new property in database
+        // Step 1: Create property
         const newProperty = await Properties.create({
             title,
             address,
-            owner_name,
-            owner_phone,
+            owner_name: owner_name || null,
+            owner_phone: owner_phone || null,
             city,
             state,
             zip_code,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
             property_type_id,
-            price,
+            price: parseFloat(price),
             bedrooms: bedrooms ? parseInt(bedrooms) : null,
             bathrooms: bathrooms ? parseInt(bathrooms) : null,
             square_feet: square_feet ? parseInt(square_feet) : null,
+            furnishing: furnishing || "unfurnished",
+            floor_number: floor_number ? parseInt(floor_number) : null,
+            project_name: project_name || null,
+            possession_date: possession_date || null,
             status_id,
+            property_status_id: property_status_id || null,
             listed_by,
+            assign_to: assign_to || null,
             listed_date: listed_date ? convertUTCToLocal(listed_date) : convertUTCToLocal(new Date()),
-            description,
+            description: description || null,
             created_at: convertUTCToLocal(new Date()),
-        });
+        }, { transaction: t });
 
-        // Handle file uploads (images/videos)
+        // Step 2: Add amenities if provided
+
+        // Convert comma-separated string to array if needed
+        let amenities = req.body.amenities;
+        if (typeof amenities === "string") {
+            try {
+                // Case 1: Sent as "[2,4,5]" => parse JSON string
+                amenities = JSON.parse(amenities);
+            } catch {
+                // Case 2: Sent as "2,4,5" => split manually
+                amenities = amenities.split(",").map((id) => parseInt(id));
+            }
+        }
+        if (amenities && Array.isArray(amenities) && amenities.length > 0) {
+            const amenityEntries = amenities.map((amenityId) => ({
+                property_id: newProperty.property_id,
+                amenity_id: amenityId,
+            }));
+
+            await PropertyAmenities.bulkCreate(amenityEntries, { transaction: t });
+        }
+
+        // Step 3: Handle file uploads (optional)
         if (req.files && req.files.length > 0) {
             const uploadedMedia = await Promise.all(
                 req.files.map(async (file) => {
@@ -76,16 +117,21 @@ export const addProperty = asyncHandler(async (req, res, next) => {
                             uploaded_at: new Date(),
                         };
                     }
+                    return null;
                 })
             );
 
-            // Save uploaded media in database
-            await PropertyMedia.bulkCreate(uploadedMedia.filter((media) => media !== undefined));
+            const validMedia = uploadedMedia.filter((media) => media !== null);
+            if (validMedia.length > 0) {
+                await PropertyMedia.bulkCreate(validMedia, { transaction: t });
+            }
         }
 
-        // Send success response
-        res.status(201).json(new ApiResponse(201, newProperty, "Property added successfully"));
+        await t.commit(); // 🔥 commit if everything successful
+
+        res.status(201).json(new ApiResponse(201, newProperty, "Property added successfully with amenities and media."));
     } catch (error) {
+        await t.rollback(); // 🔥 rollback if any error
         console.error("Error adding property:", error);
         next(new ApiError(500, "Something went wrong while adding the property."));
     }
@@ -119,6 +165,16 @@ export const GetAllProperties = asyncHandler(async (req, res, next) => {
                     as: "propertyMedia",
                     attributes: ["media_type", "file_url"],
                 },
+                {
+                    model: Amenity,  //  Include Amenity here
+                    attributes: ["amenity_id", "name"],
+                    through: { attributes: [] }, // don't show PropertyAmenities join table data
+                },
+                {
+                    model: PropertyStatus,
+                    as: "propertyStatus",
+                    attributes: ["property_status_id", "status_name"],
+                }
             ],
         });
         if (!properties || properties.length === 0) {
@@ -165,6 +221,16 @@ export const GetPropertyById = asyncHandler(async (req, res, next) => {
                 attributes: ["media_type", "file_url"]
 
             },
+            {
+                model: Amenity,  //  Include Amenity here
+                attributes: ["amenity_id", "name"],
+                through: { attributes: [] }, // don't show PropertyAmenities join table data
+            },
+            {
+                model: PropertyStatus,
+                as: "propertyStatus",
+                attributes: ["property_status_id", "status_name"],
+            }
         ],
     });
 
@@ -186,22 +252,30 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
         city,
         state,
         zip_code,
+        latitude,
+        longitude,
         property_type_id,
         price,
         bedrooms,
         bathrooms,
         square_feet,
+        furnishing,
+        floor_number,
+        project_name,
+        possession_date,
         status_id,
+        property_status_id,
         listed_by,
+        assign_to,
         listed_date,
         description,
+        amenities, // 👈 receive amenities here
     } = req.body;
 
     if (!title || !address || !city || !state || !zip_code || !property_type_id || !price || !status_id || !listed_by) {
         return next(new ApiError(400, "Missing required fields."));
     }
 
-    // Start transaction
     const transaction = await sequelize.transaction();
     try {
         // Check if property exists
@@ -211,26 +285,33 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
             return next(new ApiError(404, "Property not found."));
         }
 
-
-        // Update property
+        // Update property details
         const [updatedRows] = await Properties.update(
             {
                 title,
                 address,
-                owner_name,
-                owner_phone,
+                owner_name: owner_name || null,
+                owner_phone: owner_phone || null,
                 city,
                 state,
                 zip_code,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
                 property_type_id,
-                price,
-                bedrooms,
-                bathrooms,
-                square_feet,
+                price: parseFloat(price),
+                bedrooms: bedrooms ? parseInt(bedrooms) : null,
+                bathrooms: bathrooms ? parseInt(bathrooms) : null,
+                square_feet: square_feet ? parseInt(square_feet) : null,
+                furnishing: furnishing || "unfurnished",
+                floor_number: floor_number ? parseInt(floor_number) : null,
+                project_name: project_name || null,
+                possession_date: possession_date || null,
                 status_id,
+                property_status_id: property_status_id || null,
                 listed_by,
+                assign_to: assign_to || null,
                 listed_date: listed_date ? convertUTCToLocal(listed_date) : convertUTCToLocal(new Date()),
-                description,
+                description: description || null,
             },
             { where: { property_id }, transaction }
         );
@@ -240,10 +321,36 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
             return next(new ApiError(500, "Failed to update property."));
         }
 
+        // 🔥 Handle amenities update
+        if (amenities) {
+            let parsedAmenities = amenities;
 
-        // Handle media files
+            if (typeof amenities === "string") {
+                try {
+                    parsedAmenities = JSON.parse(amenities);
+                } catch {
+                    parsedAmenities = amenities.split(",").map((id) => parseInt(id));
+                }
+            }
+
+            if (Array.isArray(parsedAmenities)) {
+                // First, delete old amenities for this property
+                await PropertyAmenities.destroy({ where: { property_id }, transaction });
+
+                // Then, insert new amenities
+                const amenityEntries = parsedAmenities.map((amenityId) => ({
+                    property_id,
+                    amenity_id: amenityId,
+                }));
+
+                if (amenityEntries.length > 0) {
+                    await PropertyAmenities.bulkCreate(amenityEntries, { transaction });
+                }
+            }
+        }
+
+        // 🔥 Handle media files update
         if (req.files && req.files.length > 0) {
-
             // Delete existing media
             await PropertyMedia.destroy({ where: { property_id }, transaction });
 
@@ -279,6 +386,7 @@ export const UpdateProperty = asyncHandler(async (req, res, next) => {
         res.status(200).json(new ApiResponse(200, updatedRows, "Property updated successfully"));
     } catch (error) {
         await transaction.rollback();
+        console.error("Error updating property:", error);
         next(new ApiError(500, "Error updating property."));
     }
 });
@@ -554,36 +662,36 @@ export const toggleArchiveProperty = asyncHandler(async (req, res, next) => {
 
 export const suggestLeads = asyncHandler(async (req, res) => {
     const { property_id } = req.params;
-  
+
     if (!property_id) throw new ApiError(400, "Property ID is required");
-  
+
     // Fetch property details
     const property = await Properties.findOne({
-      where: { property_id: property_id },
-      attributes: ["price", "property_type_id"],
+        where: { property_id: property_id },
+        attributes: ["price", "property_type_id"],
     });
-  
+
     if (!property) throw new ApiError(404, "Property not found");
-  
+
     const { price, property_type_id } = property;
-  
+
     // Fetch leads matching the property's price range OR preferred property type
     const leads = await Lead.findAll({
-      where: {
-        [Op.or]: [
-          {
-            budget_min: { [Op.lte]: price },
-            budget_max: { [Op.gte]: price },
-          },
-          {
-            preferred_type_id_fk: property_type_id,
-          },
-        ],
-        isArchived: false,
-      },
+        where: {
+            [Op.or]: [
+                {
+                    budget_min: { [Op.lte]: price },
+                    budget_max: { [Op.gte]: price },
+                },
+                {
+                    preferred_type_id_fk: property_type_id,
+                },
+            ],
+            isArchived: false,
+        },
     });
-  
+
     if (!leads.length) throw new ApiError(404, "No matching leads found");
-  
+
     res.status(200).json(new ApiResponse(200, leads, "Leads suggested successfully"));
-  });
+});
