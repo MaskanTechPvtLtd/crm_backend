@@ -57,6 +57,33 @@ const Lead = sequelize.define(
       type: DataTypes.DECIMAL(15, 2),
       allowNull: true,
     },
+    bedrooms: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      // comment: 'Preferred number of bedrooms'
+    },
+    bathrooms: {
+      type: DataTypes.INTEGER,
+      allowNull: true, //      comment: 'Preferred number of bathrooms'
+
+    },
+    furnished: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, //      comment: 'Whether the property should be furnished'
+    },
+    preferredLocation: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Preferred city or neighborhood'
+    },
+    preferredCity: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    priority: {
+      type: DataTypes.ENUM('low', 'medium', 'high'),
+      defaultValue: 'medium',
+    },
     preferred_type_id_fk: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -89,11 +116,5 @@ const Lead = sequelize.define(
     timestamps: false, // Set to true if you need `createdAt` and `updatedAt`
   }
 );
-
-// // Define associations
-// Lead.belongsTo(Employee, { foreignKey: "assigned_to_fk", onDelete: "SET NULL" });
-// Lead.belongsTo(PropertyType, { foreignKey: "preferred_type_id_fk", onDelete: "SET NULL" });
-// Lead.belongsTo(LeadSource, { foreignKey: "source_id_fk", onDelete: "SET NULL" });
-// Lead.belongsTo(Status, { foreignKey: "status_id_fk", onDelete: "SET NULL" });
 
 export default Lead;
