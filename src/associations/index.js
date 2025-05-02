@@ -8,6 +8,7 @@ import { PropertyMediaAssociation } from "./propertyMedia.associations.js";
 import { TasksAssociation } from "./tasks.associations.js";
 import { NotificationAssociation } from "./notification.associations.js";
 import { CustomerFeedbackAssociations } from "./customerfeedback.associations.js";
+import { AmenitiesAssociation } from "./amenities.association.js";
 
 export const applyAllAssociations = () => {
   PropertyMediaAssociation();
@@ -20,4 +21,5 @@ export const applyAllAssociations = () => {
   TasksAssociation();
   NotificationAssociation();
   CustomerFeedbackAssociations();
+  AmenitiesAssociation()
 };

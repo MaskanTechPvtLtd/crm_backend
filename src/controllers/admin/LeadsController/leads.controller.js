@@ -12,12 +12,16 @@ import UserAuth from "../../../models/userauth.model.js";
 import Interaction from "../../../models/interactions.model.js";
 import Properties from "../../../models/properties.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
+import LeadAmenities from "../../../models/leadAmenities.model.js";
+import Amenity from "../../../models/amenities.model.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
+import { sequelize } from "../../../db/index.js";
 
 
 export const AddNewLead = asyncHandler(async (req, res, next) => {
+  const t = await sequelize.transaction(); // Start transaction
   try {
-    const {
+    let {
       first_name,
       last_name,
       email,
@@ -26,10 +30,22 @@ export const AddNewLead = asyncHandler(async (req, res, next) => {
       status_id_fk,
       budget_min,
       budget_max,
+      bedrooms,
+      bathrooms,
+      furnished,
+      preferredLocation,
+      preferredCity,
+      priority,
       preferred_type_id_fk,
+      amenities, // <-- Accept amenities from request
     } = req.body;
 
-    // Check if the email or phone already exists
+    // Basic required fields check
+    if (!first_name || !last_name || !email || !phone || !source_id_fk || !status_id_fk) {
+      return next(new ApiError(400, "Missing required fields."));
+    }
+
+    // Check for duplicate lead
     const existingLead = await Lead.findOne({
       where: {
         [Op.or]: [{ email }, { phone }],
@@ -40,40 +56,76 @@ export const AddNewLead = asyncHandler(async (req, res, next) => {
       return next(new ApiError(400, "Lead with this email or phone already exists."));
     }
 
-    // Create a new lead
-    const newLead = await Lead.create({
-      first_name,
-      last_name,
-      email,
-      phone,
-      source_id_fk,
-      status_id_fk,
-      budget_min,
-      budget_max,
-      preferred_type_id_fk,
+    // Create lead
+    const newLead = await Lead.create(
+      {
+        first_name,
+        last_name,
+        email,
+        phone,
+        source_id_fk,
+        status_id_fk,
+        budget_min,
+        budget_max,
+        bedrooms,
+        bathrooms,
+        furnished,
+        preferredLocation,
+        preferredCity,
+        priority,
+        preferred_type_id_fk,
+      },
+      { transaction: t }
+    );
 
-    });
+    // Parse and attach amenities (if any)
+    if (typeof amenities === "string") {
+      try {
+        amenities = JSON.parse(amenities);
+      } catch {
+        amenities = amenities.split(",").map((id) => parseInt(id));
+      }
+    }
 
-    // Fetch related data (agent name, property type, etc.)
+    if (amenities && Array.isArray(amenities) && amenities.length > 0) {
+      const amenityEntries = amenities.map((amenityId) => ({
+        lead_id: newLead.lead_id,
+        amenity_id: amenityId,
+      }));
+
+      await LeadAmenities.bulkCreate(amenityEntries, { transaction: t });
+    }
+
+    // Fetch full lead with details
     const leadWithDetails = await Lead.findByPk(newLead.lead_id, {
       include: [
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
         { model: LeadStatus, attributes: ["status_id", "status_name"] },
+        {
+          model: Amenity,
+          attributes: ["amenity_id", "name"], // assuming 'name' is an amenity field
+          through: { attributes: [] }, // omit junction table details
+        },
       ],
+      transaction: t,
     });
 
+    await t.commit();
     res.status(201).json(new ApiResponse(201, leadWithDetails, "Lead created successfully."));
   } catch (error) {
+    await t.rollback();
     console.error("Error creating lead:", error);
     next(new ApiError(500, "Something went wrong while creating the lead."));
   }
 });
 
+
 export const EditLead = asyncHandler(async (req, res, next) => {
+  const t = await sequelize.transaction(); // Start transaction
   try {
-    const { lead_id } = req.params; // Extract lead ID from request parameters
-    const {
+    const { lead_id } = req.params;
+    let {
       first_name,
       last_name,
       email,
@@ -82,12 +134,20 @@ export const EditLead = asyncHandler(async (req, res, next) => {
       status_id_fk,
       budget_min,
       budget_max,
+      bedrooms,
+      bathrooms,
+      furnished,
+      preferredLocation,
+      preferredCity,
+      priority,
       preferred_type_id_fk,
+      amenities,
     } = req.body;
 
-    // Check if the lead exists
+    // Check if lead exists
     const lead = await Lead.findByPk(lead_id);
     if (!lead) {
+      await t.rollback();
       return next(new ApiError(404, "Lead not found."));
     }
 
@@ -95,42 +155,88 @@ export const EditLead = asyncHandler(async (req, res, next) => {
     const existingLead = await Lead.findOne({
       where: {
         [Op.or]: [{ email }, { phone }],
-        lead_id: { [Op.ne]: lead_id }, // Ensure it's not the same lead
+        lead_id: { [Op.ne]: lead_id },
       },
     });
 
     if (existingLead) {
+      await t.rollback();
       return next(new ApiError(400, "Another lead with this email or phone already exists."));
     }
 
-    // Update the lead
-    await lead.update({
-      first_name,
-      last_name,
-      email,
-      phone,
-      source_id_fk,
-      status_id_fk,
-      budget_min,
-      budget_max,
-      preferred_type_id_fk,
-    });
+    // Update lead data
+    await lead.update(
+      {
+        first_name,
+        last_name,
+        email,
+        phone,
+        source_id_fk,
+        status_id_fk,
+        budget_min,
+        budget_max,
+        bedrooms,
+        bathrooms,
+        furnished,
+        preferredLocation,
+        preferredCity,
+        priority,
+        preferred_type_id_fk,
+      },
+      { transaction: t }
+    );
 
-    // Fetch updated lead details
+    // Process amenities
+    if (typeof amenities === "string") {
+      try {
+        amenities = JSON.parse(amenities);
+      } catch {
+        amenities = amenities.split(",").map((id) => parseInt(id));
+      }
+    }
+
+    if (Array.isArray(amenities)) {
+      // Delete old amenities
+      await LeadAmenities.destroy({
+        where: { lead_id },
+        transaction: t,
+      });
+
+      // Insert new amenities
+      if (amenities.length > 0) {
+        const amenityEntries = amenities.map((amenityId) => ({
+          lead_id,
+          amenity_id: amenityId,
+        }));
+
+        await LeadAmenities.bulkCreate(amenityEntries, { transaction: t });
+      }
+    }
+
+    // Fetch updated lead with associations
     const updatedLead = await Lead.findByPk(lead_id, {
       include: [
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
         { model: LeadStatus, attributes: ["status_id", "status_name"] },
+        {
+          model: Amenity,
+          attributes: ["amenity_id", "name"],
+          through: { attributes: [] },
+        },
       ],
+      transaction: t,
     });
 
+    await t.commit();
     res.status(200).json(new ApiResponse(200, updatedLead, "Lead updated successfully."));
   } catch (error) {
+    await t.rollback();
     console.error("Error updating lead:", error);
     next(new ApiError(500, "Something went wrong while updating the lead."));
   }
 });
+
 
 export const GetLeadById = asyncHandler(async (req, res, next) => {
   try {
@@ -143,6 +249,11 @@ export const GetLeadById = asyncHandler(async (req, res, next) => {
         { model: PropertyType, attributes: ["property_type_id", "type_name"] },
         { model: LeadSource, attributes: ["source_id", "source_name"] },
         { model: LeadStatus, attributes: ["status_id", "status_name"] },
+        {
+          model: Amenity,
+          attributes: ["amenity_id", "name"], // assuming 'name' is an amenity field
+          through: { attributes: [] }, // omit junction table details
+        },
       ],
     });
 
@@ -159,28 +270,55 @@ export const GetLeadById = asyncHandler(async (req, res, next) => {
 
 export const GetAllLeads = asyncHandler(async (req, res, next) => {
   try {
-    const { status_id, employee_id, property_type_id, source_id } = req.query;
+    const { status_id, employee_id, property_type_id, source_id, priority, amenities } = req.query;
 
     // Build dynamic filter object
-    let filters = {};
+    const filters = {};
     if (status_id) filters.status_id_fk = status_id;
     if (employee_id) filters.assigned_to_fk = employee_id;
     if (property_type_id) filters.preferred_type_id_fk = property_type_id;
     if (source_id) filters.source_id_fk = source_id;
+    if (priority) filters.priority = priority;
 
-    // Fetch leads with optional filters
+    // Parse amenities filter (can be array, JSON string, or comma-separated)
+    let amenitiesArray = [];
+    if (amenities) {
+      if (typeof amenities === "string") {
+        try {
+          amenitiesArray = JSON.parse(amenities);
+        } catch {
+          amenitiesArray = amenities.split(",").map((id) => parseInt(id));
+        }
+      } else if (Array.isArray(amenities)) {
+        amenitiesArray = amenities.map((id) => parseInt(id));
+      }
+    }
+
+    // Set up include array for associations
+    const include = [
+      { model: Employee, attributes: ["employee_id", "first_name", "last_name"] },
+      { model: PropertyType, attributes: ["property_type_id", "type_name"] },
+      { model: LeadSource, attributes: ["source_id", "source_name"] },
+      { model: LeadStatus, attributes: ["status_id", "status_name"] },
+      {
+        model: Amenity,
+        attributes: ["amenity_id", "name"],
+        through: { attributes: [] },
+        ...(amenitiesArray.length > 0 && {
+          where: { amenity_id: amenitiesArray },
+          required: true, // Ensures leads must have these amenities
+        }),
+      },
+    ];
+
+    // Fetch leads
     const leads = await Lead.findAll({
       where: filters,
-      include: [
-        { model: Employee, attributes: ["employee_id", "first_name", "last_name"] },
-        { model: PropertyType, attributes: ["property_type_id", "type_name"] },
-        { model: LeadSource, attributes: ["source_id", "source_name"] },
-        { model: LeadStatus, attributes: ["status_id", "status_name"] },
-      ],
-      order: [["created_at", "DESC"]], // Order by newest leads first
+      include,
+      order: [["created_at", "DESC"]],
+      distinct: true, // Important when joining many-to-many
     });
 
-    // Handle case when no leads are found
     if (!leads || leads.length === 0) {
       return next(new ApiError(404, "No leads found with the given filters."));
     }
@@ -189,12 +327,10 @@ export const GetAllLeads = asyncHandler(async (req, res, next) => {
   } catch (error) {
     console.error("Error fetching leads:", error);
 
-    // Handle Sequelize validation errors
     if (error.name === "SequelizeDatabaseError") {
       return next(new ApiError(400, "Invalid filter parameters provided."));
     }
 
-    // Handle unexpected errors
     next(new ApiError(500, "Something went wrong while fetching leads."));
   }
 });
