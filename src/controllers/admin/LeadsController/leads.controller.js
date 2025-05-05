@@ -788,6 +788,8 @@ export const suggestProperties = asyncHandler(async (req, res) => {
   })
   .filter(property => property.match_score >= 37) // Only include matches with score ≥ 50
   .sort((a, b) => b.match_score - a.match_score);
-
+  if (!scored.length) {
+    throw new ApiError(404, "No sufficiently matching leads found");
+}
   res.status(200).json(new ApiResponse(200, scored, "Properties ranked and suggested successfully"));
 });

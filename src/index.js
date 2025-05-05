@@ -3,6 +3,7 @@ import { connectSequelize } from "./db/index.js";
 import { app } from "./app.js";
 import { PORT } from "./constants.js";
 import  syncDatabase  from "./utils/dbSync.js";
+import { applyAllAssociations } from "./associations/index.js";
 
 dotenv.config({
   path: "./.env",
@@ -16,6 +17,8 @@ connectSequelize()
     // if (process.env.NODE_ENV === 'development') {
       // syncDatabase();
     // }
+        applyAllAssociations();
+  
     app.listen(PORT, () => {
       console.log(`🔥 Server is running on port: ${PORT}`);
     });
