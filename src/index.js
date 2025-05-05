@@ -13,8 +13,9 @@ connectSequelize()
     app.on("error", (err) => {
       console.error(`Run up with some error: ${err}`);
     });
-    syncDatabase();
-
+    // if (process.env.NODE_ENV === 'development') {
+      // syncDatabase();
+    // }
     app.listen(PORT, () => {
       console.log(`🔥 Server is running on port: ${PORT}`);
     });

@@ -660,38 +660,153 @@ export const toggleArchiveProperty = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, { property_id, isArchived: newStatus }, message));
 });
 
+// export const suggestLeads = asyncHandler(async (req, res) => {
+//     const { property_id } = req.params;
+
+//     if (!property_id) throw new ApiError(400, "Property ID is required");
+
+//     // Fetch property details
+//     const property = await Properties.findOne({
+//       where: { property_id },
+//       attributes: [
+//         "price",
+//         "property_type_id",
+//         "bedrooms",
+//         "bathrooms",
+//         "furnishing",
+//         "city",
+//         "address",
+//       ],
+//     });
+
+//     if (!property) throw new ApiError(404, "Property not found");
+
+//     const {
+//       price,
+//       property_type_id,
+//       bedrooms,
+//       bathrooms,
+//       furnishing,
+//       city,
+//       address,
+//     } = property;
+
+//     // Furnishing match logic
+//     const furnishingMatch =
+//       furnishing === "fully-furnished" || furnishing === "semi-furnished"
+//         ? [true] // Match leads who want furnished = true
+//         : [true, false]; // Include all leads if property is not furnished
+
+//     // Filter logic
+//     const whereClause = {
+//       isArchived: false,
+//       budget_min: { [Op.lte]: price },
+//       budget_max: { [Op.gte]: price },
+//       preferred_type_id_fk: property_type_id || { [Op.not]: null },
+//       ...(bedrooms && { bedrooms }),
+//       ...(bathrooms && { bathrooms }),
+//       ...(city && { preferredCity: city }),
+//       ...(address && { preferredLocation: { [Op.iLike]: `%${address}%` } }),
+//       furnished: { [Op.in]: furnishingMatch },
+//     };
+
+//     const leads = await Lead.findAll({
+//       where: whereClause,
+//     });
+
+//     if (!leads.length) {
+//       throw new ApiError(404, "No matching leads found");
+//     }
+
+//     res
+//       .status(200)
+//       .json(new ApiResponse(200, leads, "Leads suggested successfully"));
+//   });
+
+
 export const suggestLeads = asyncHandler(async (req, res) => {
     const { property_id } = req.params;
 
     if (!property_id) throw new ApiError(400, "Property ID is required");
 
-    // Fetch property details
+    // Fetch property details with amenities
     const property = await Properties.findOne({
-        where: { property_id: property_id },
-        attributes: ["price", "property_type_id"],
+        where: { property_id },
+        include: [
+            {
+                model: Amenity,
+                through: { attributes: [] }, // omit junction details
+                attributes: ["amenity_id", "name"],
+            },
+        ],
     });
 
     if (!property) throw new ApiError(404, "Property not found");
 
-    const { price, property_type_id } = property;
+    const {
+        price,
+        property_type_id,
+        bedrooms,
+        bathrooms,
+        furnishing,
+        city,
+        address,
+        Amenities: PropertyAmenities = [],
+    } = property;
 
-    // Fetch leads matching the property's price range OR preferred property type
+    const propertyAmenityIds = PropertyAmenities.map(a => a.amenity_id);
+
+    // Fetch all active leads with amenities
     const leads = await Lead.findAll({
-        where: {
-            [Op.or]: [
-                {
-                    budget_min: { [Op.lte]: price },
-                    budget_max: { [Op.gte]: price },
-                },
-                {
-                    preferred_type_id_fk: property_type_id,
-                },
-            ],
-            isArchived: false,
-        },
+        where: { isArchived: false },
+        include: [
+            {
+                model: Amenity,
+                through: { attributes: [] },
+                attributes: ["amenity_id", "name"],
+            },
+        ],
     });
 
-    if (!leads.length) throw new ApiError(404, "No matching leads found");
+    if (!leads.length) throw new ApiError(404, "No leads found");
 
-    res.status(200).json(new ApiResponse(200, leads, "Leads suggested successfully"));
+    // Score each lead
+    const scoredLeads = leads
+        .map((lead) => {
+            let score = 0;
+
+            if (lead.budget_min <= price && lead.budget_max >= price) score += 15;
+            if (lead.preferred_type_id_fk === property_type_id) score += 15;
+            if (lead.bedrooms === bedrooms) score += 10;
+            if (lead.bathrooms === bathrooms) score += 10;
+            if (lead.preferredCity?.toLowerCase() === city.toLowerCase()) score += 10;
+            if (
+                lead.preferredLocation &&
+                address.toLowerCase().includes(lead.preferredLocation.toLowerCase())
+            )
+                score += 5;
+
+            if (
+                lead.furnished &&
+                (furnishing === "fully-furnished" || furnishing === "semi-furnished")
+            )
+                score += 10;
+
+            const leadAmenityIds = lead.Amenities.map(a => a.amenity_id);
+            const matchedAmenities = leadAmenityIds.filter(id => propertyAmenityIds.includes(id));
+            score += matchedAmenities.length * 3;
+
+            return {
+                ...lead.toJSON(),
+                match_score: score,
+            };
+        })
+        .filter(lead => lead.match_score >= 37) // Only return leads with score >= 50
+        .sort((a, b) => b.match_score - a.match_score); // Highest score first
+
+    if (!scoredLeads.length) {
+        throw new ApiError(404, "No sufficiently matching leads found");
+    }
+
+    res.status(200).json(new ApiResponse(200, scoredLeads, "Leads ranked and suggested successfully"));
 });

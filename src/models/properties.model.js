@@ -45,14 +45,6 @@ const Properties = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: false,
     },
-    latitude: {
-      type: DataTypes.DECIMAL(9, 6), // For geolocation
-      allowNull: true,
-    },
-    longitude: {
-      type: DataTypes.DECIMAL(9, 6), // For geolocation
-      allowNull: true,
-    },
     property_type_id: {
       type: DataTypes.INTEGER,
       references: {

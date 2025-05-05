@@ -14,6 +14,7 @@ import Properties from "../../../models/properties.model.js";
 import PropertyMedia from "../../../models/propertymedia.model.js";
 import LeadAmenities from "../../../models/leadAmenities.model.js";
 import Amenity from "../../../models/amenities.model.js";
+import PropertyAmenities from "../../../models/propertyAmenities.model.js";
 import { sendNotification } from "../../../utils/sendNotification.utils.js";
 import { sequelize } from "../../../db/index.js";
 
@@ -640,47 +641,153 @@ export const toggleArchiveLead = asyncHandler(async (req, res, next) => {
 });
 
 
+// export const suggestProperties = asyncHandler(async (req, res) => {
+//   const { leadId } = req.params;
+
+//   if (!leadId) throw new ApiError(400, "Lead ID is required");
+
+//   const lead = await Lead.findOne({
+//     where: { lead_id: leadId },
+//     attributes: [
+//       "budget_min",
+//       "budget_max",
+//       "preferred_type_id_fk",
+//       "bedrooms",
+//       "bathrooms",
+//       "furnished",
+//       "preferredCity",
+//       "preferredLocation",
+//     ],
+//   });
+
+//   if (!lead) throw new ApiError(404, "Lead not found");
+
+//   const {
+//     budget_min,
+//     budget_max,
+//     preferred_type_id_fk,
+//     bedrooms,
+//     bathrooms,
+//     furnished,
+//     preferredCity,
+//     preferredLocation,
+//   } = lead;
+
+//   // Furnishing match logic
+//   const furnishingMatch = furnished
+//     ? ["fully-furnished", "semi-furnished"] // If lead wants furnished, allow both
+//     : ["unfurnished", "semi-furnished", "fully-furnished"]; // Otherwise, no strict filter
+
+//   const whereClause = {
+//     isArchived: false,
+//     price: {
+//       [Op.between]: [budget_min || 0, budget_max || Number.MAX_VALUE],
+//     },
+//     property_type_id: preferred_type_id_fk || { [Op.not]: null },
+//     ...(bedrooms && { bedrooms }),
+//     ...(bathrooms && { bathrooms }),
+//     ...(preferredCity && { city: preferredCity }),
+//     ...(preferredLocation && { address: { [Op.iLike]: `%${preferredLocation}%` } }),
+//     furnishing: { [Op.in]: furnishingMatch },
+//   };
+
+//   const properties = await Properties.findAll({
+//     where: whereClause,
+//     include: [
+//       {
+//         model: PropertyMedia,
+//         as: "propertyMedia",
+//         attributes: ["media_id", "media_type", "file_url"],
+//       },
+//     ],
+//   });
+
+//   if (!properties.length) {
+//     throw new ApiError(404, "No matching properties found");
+//   }
+
+//   res.status(200).json(new ApiResponse(200, properties, "Properties suggested successfully"));
+// });
+
 export const suggestProperties = asyncHandler(async (req, res) => {
   const { leadId } = req.params;
 
   if (!leadId) throw new ApiError(400, "Lead ID is required");
 
-  // Fetch lead details
   const lead = await Lead.findOne({
     where: { lead_id: leadId },
-    attributes: ["budget_min", "budget_max", "preferred_type_id_fk"],
+    include: [{ model: Amenity }], // assuming a junction table for lead_amenities
   });
 
   if (!lead) throw new ApiError(404, "Lead not found");
 
-  const { budget_min, budget_max, preferred_type_id_fk } = lead;
+  const {
+    budget_min,
+    budget_max,
+    preferred_type_id_fk,
+    bedrooms,
+    bathrooms,
+    furnished,
+    preferredCity,
+    preferredLocation,
+    LeadAmenities = [],
+  } = lead;
 
-  // Fetch properties matching the lead's preferences with media included
+  const amenityIds = LeadAmenities.map(a => a.amenity_id); // array of lead's preferred amenities
+
   const properties = await Properties.findAll({
     where: {
-      [Op.or]: [
-        {
-          price: {
-            [Op.between]: [budget_min || 0, budget_max || Number.MAX_VALUE],
-          },
-        },
-        {
-          property_type_id: preferred_type_id_fk,
-        }
-      ],
-      isArchived: false, // Always applied
+      isArchived: false,
+      price: {
+        [Op.between]: [budget_min || 0, budget_max || Number.MAX_VALUE],
+      },
     },
     include: [
       {
         model: PropertyMedia,
         as: "propertyMedia",
-        attributes: ["media_id", "media_type", "file_url"], // Only necessary fields
+        attributes: ["media_id", "media_type", "file_url"],
+      },
+      {
+        model: Amenity,
+        attributes: ["amenity_id", "name"], // assuming 'name' is an amenity field
+        through: { attributes: [] }, // omit junction table details
       },
     ],
   });
 
   if (!properties.length) throw new ApiError(404, "No matching properties found");
 
-  res.status(200).json(new ApiResponse(200, properties, "Properties suggested successfully"));
-});
+  // Scoring logic
+  const scored = properties.map((property) => {
+    let score = 0;
 
+    if (preferred_type_id_fk && property.property_type_id === preferred_type_id_fk) score += 15;
+    if (bedrooms && property.bedrooms === bedrooms) score += 10;
+    if (bathrooms && property.bathrooms === bathrooms) score += 10;
+    if (preferredCity && property.city.toLowerCase() === preferredCity.toLowerCase()) score += 10;
+    if (
+      preferredLocation &&
+      property.address.toLowerCase().includes(preferredLocation.toLowerCase())
+    ) score += 5;
+
+    if (
+      furnished &&
+      (property.furnishing === "fully-furnished" || property.furnishing === "semi-furnished")
+    ) score += 10;
+
+    // Amenity match
+    const propertyAmenityIds = property.Amenities.map(a => a.amenity_id);
+    const matchedAmenities = propertyAmenityIds.filter(id => amenityIds.includes(id));
+    score += matchedAmenities.length * 3;
+
+    return {
+      ...property.toJSON(),
+      match_score: score,
+    };
+  })
+  .filter(property => property.match_score >= 37) // Only include matches with score ≥ 50
+  .sort((a, b) => b.match_score - a.match_score);
+
+  res.status(200).json(new ApiResponse(200, scored, "Properties ranked and suggested successfully"));
+});

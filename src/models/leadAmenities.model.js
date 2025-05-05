@@ -9,15 +9,18 @@ const LeadAmenities = sequelize.define(
     {
         lead_id: {
             type: DataTypes.INTEGER,
+            primaryKey: true,
             references: { model: Lead, key: "lead_id" },
         },
         amenity_id: {
             type: DataTypes.INTEGER,
+            primaryKey: true,
             references: { model: Amenity, key: "amenity_id" },
         },
     },
     {
         tableName: "lead_amenities",
+        id: false,
         timestamps: false, // Assuming you don't need createdAt/updatedAt fields
     });
 
